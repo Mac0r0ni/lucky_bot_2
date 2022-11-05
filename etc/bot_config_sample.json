@@ -1,0 +1,22 @@
+{
+  "general": {
+    "debug": 0,
+    "prefix": "+",
+    "max_groups": 30
+  },
+  "paths": {
+    "trigger_media": "var/media/trigger/"
+  },
+  "mysql": {
+    "hostname": "",
+    "port": 3306,
+    "username": "",
+    "password": "",
+    "database": ""
+  },
+  "redis": {
+    "hostname": "",
+    "port": 6379,
+    "password": ""
+  }
+}
