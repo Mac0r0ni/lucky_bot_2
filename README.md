@@ -6,10 +6,10 @@
 ### Installation:
 
 Requirements:
--Linux Server OS
--MySQL Server
--Redis Server
--Python 3 Either 3.6, 3.7, or 3.8
+- Linux Server OS
+- MySQL Server
+- Redis Server
+- Python 3 Either 3.6, 3.7, or 3.8
 
 
 ### Step 1
