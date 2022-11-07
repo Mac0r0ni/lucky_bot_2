@@ -1,6 +1,7 @@
 from colorama import Fore, Style
 
 from lib.database_handler import Database
+from lib.message_processing_handler import MessageProcessing
 from lib.redis_handler import RedisCache
 from lib.user_handler import User
 
@@ -12,6 +13,7 @@ class GroupStatus:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def parse_group_status(self, response):
         group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
@@ -56,6 +58,9 @@ class GroupStatus:
         elif "has left the chat" in status:
             if self.config["general"]["debug"] == 1 or self.config["general"]["debug"] == 2:
                 print("user left chat")
+            if group_data["group_settings"]["exit_status"] == 1:
+                if group_data["group_messages"]["exit_message"] != "none":
+                    MessageProcessing(self).process_message_media("exit_message", group_data["group_messages"]["exit_message"], response.status_jid, response.group_jid)
             if group_members:
                 if response.status_jid in group_members:
                     if group_members[response.status_jid]["jid"] != "Unknown":

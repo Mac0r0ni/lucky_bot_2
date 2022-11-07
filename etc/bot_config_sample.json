@@ -5,7 +5,8 @@
     "max_groups": 30
   },
   "paths": {
-    "trigger_media": "var/media/trigger/"
+    "trigger_media": "var/media/trigger/",
+    "message_media": "var/media/message/"
   },
   "mysql": {
     "hostname": "",

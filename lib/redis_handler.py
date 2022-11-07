@@ -160,6 +160,35 @@ class RedisCache:
     def remove_all_talker_lurkers(self, activity, group_jid):
         self.r.delete(group_jid.split('@')[0], activity)
 
+    def add_timer_cache(self, timer_jid, group_jid):
+        peer_data = {"stop": False}
+        self.r.hset(group_jid.split('@')[0] + "_timer_cache", timer_jid, json.dumps(peer_data))
+
+    def get_all_timer_cache(self, group_jid):
+        data = self.r.hgetall(group_jid.split('@')[0] + "_timer_cache")
+        if data:
+            return data
+        else:
+            return False
+
+    # ------------------------------------
+    #  Redis Cache - Timer Data
+    # ------------------------------------
+
+    def update_timer_cache(self, timer_jid, group_jid):
+        peer_data = {"stop": True}
+        self.r.hset(group_jid.split('@')[0] + "_timer_cache", timer_jid, json.dumps(peer_data))
+
+    def get_timer_cache(self, peer_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0] + "_timer_cache", peer_jid)
+        if data:
+            return json.loads(data, strict=False)
+        else:
+            return False
+
+    def rem_from_timer_cache(self, peer_jid, group_jid):
+        self.r.hdel(group_jid.split('@')[0] + "_timer_cache", peer_jid)
+
     # -----------------------------------------
     #  Redis Cache - Group Data Cache
     # -----------------------------------------
@@ -424,3 +453,29 @@ class RedisCache:
 
     def rem_from_media_sub_queue(self, peer_jid, group_jid):
         self.r.hdel(group_jid + "_sub_queue", peer_jid)
+
+    # ------------------------------------
+    #  Redis Cache - Media Message Queue
+    # ------------------------------------
+
+    def add_to_media_message_queue(self, response, action, message_type, peer_jid, group_jid):
+        sub_data = {"response": response, "action": action, "type": message_type, "time": time.time()}
+        self.r.hset(group_jid + "_message_queue", peer_jid, json.dumps(sub_data))
+
+    def get_single_media_message_queue(self, peer_jid, group_jid):
+        sub_queue = self.r.hget(group_jid + "_message_queue", peer_jid)
+        result = json.loads(sub_queue)
+        if result is not None:
+            return result
+        else:
+            return None
+
+    def get_all_media_message_queue(self, group_jid):
+        sub_queue = self.r.hgetall(group_jid + "_message_queue")
+        if sub_queue is not None:
+            return sub_queue
+        else:
+            return None
+
+    def rem_from_media_message_queue(self, peer_jid, group_jid):
+        self.r.hdel(group_jid + "_message_queue", peer_jid)

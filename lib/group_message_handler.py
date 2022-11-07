@@ -4,7 +4,7 @@ import time
 from colorama import Fore, Style
 
 from lib.database_handler import Database
-from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification
+from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification, GroupTimer, LeaveMessage
 from lib.group_fun_handler import ChanceGames
 from lib.redis_handler import RedisCache
 from lib.remote_admin_handler import RemoteAdmin
@@ -20,6 +20,7 @@ class GroupMessage:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def group_message_parser(self, chat_message):
         if self.config["general"]["debug"] == 1 or self.config["general"]["debug"] == 2:
@@ -73,6 +74,10 @@ class GroupMessage:
                 # Welcome Message Status or Change
                 WelcomeMessage(self).main(chat_message, prefix)
                 return
+            elif gm == prefix + "exit" or prefix + "exit message" in gm or gm == prefix + "exit status":
+                # Welcome Message Status or Change
+                LeaveMessage(self).main(chat_message, prefix)
+                return
             elif gm == prefix + "lock" or prefix + "lock message" in gm or gm == prefix + "lock status":
                 # Lock Status, Message Change, Or Status Change
                 Lock(self).main(chat_message, prefix)
@@ -92,6 +97,9 @@ class GroupMessage:
                 return
             elif prefix + "verify" in gm:
                 Verification(self).main(chat_message, prefix)
+                return
+            elif prefix + "timer" in gm:
+                GroupTimer(self).main(chat_message, prefix)
                 return
             elif gm == prefix + "gjid":  # check if the message is equal to gjid
                 # if it is send a group message with the group jid

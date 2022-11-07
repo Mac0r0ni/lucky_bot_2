@@ -30,6 +30,7 @@ class Triggers:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def main(self, chat_message, prefix):
         s = chat_message.body.lower()
@@ -897,23 +898,24 @@ def process_trigger(client, chat_message, trigger, trigger_response, sub_dict, p
         app = link.lower().split("https://")[1].split("/")[0]
         client.client.send_link(group_jid, link, title, text, app)
         return
-    # elif sub_dict[trigger][trigger_response][:2] == "$a":
-    #     command = sub_dict[trigger][trigger_response].split("$a ")[1]
-    #     chat_message.body = command
-    #     chat_message.from_jid = bot_jid
-    #     callback.on_group_message_received(chat_message)
-    #     return
-    # elif sub_dict[trigger][trigger_response][:1] == "(":
-    #     choice_text = sub_dict[trigger][trigger_response].split(") ")[0]
-    #     choice_text = choice_text.replace("(", "").replace(") ", "")
-    #     choices_list = sub_dict[trigger][trigger_response].split(") ")[1].replace("[", "").replace("]", "")
-    #     choices_list = choices_list.split(", ")
-    #     choices_list = list(choices_list)
-    #     choice = random.choice(choices_list)
-    #     choice_text = process_message("group", choice_text, peer_jid, group_jid, 0, 0)
-    #     message = choice_text + " " + choice
-    #     client.send_chat_message(group_jid, message)
-    #     return
+    elif sub_dict[trigger][trigger_response][:2] == "$a":
+        my_jid = client.client.get_jid(client.bot_username)
+        command = sub_dict[trigger][trigger_response].split("$a ")[1]
+        chat_message.body = command
+        chat_message.from_jid = my_jid
+        client.client.callback.on_group_message_received(chat_message)
+        return
+    elif sub_dict[trigger][trigger_response][:1] == "(":
+        choice_text = sub_dict[trigger][trigger_response].split(") ")[0]
+        choice_text = choice_text.replace("(", "").replace(") ", "")
+        choices_list = sub_dict[trigger][trigger_response].split(") ")[1].replace("[", "").replace("]", "")
+        choices_list = choices_list.split(", ")
+        choices_list = list(choices_list)
+        choice = random.choice(choices_list)
+        choice_text = process_message(client.config, "group", choice_text, peer_jid, group_jid, 0, 0)
+        message = choice_text + " " + choice
+        client.send_chat_message(group_jid, message)
+        return
 
     elif "]" in sub_dict[trigger][trigger_response] and "[" in sub_dict[trigger][trigger_response]:
         choice_list_count = sub_dict[trigger][trigger_response].count("[")

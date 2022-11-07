@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from lib.group_admin_tools import Verification
-from lib.message_processing_handler import process_message
+from lib.message_processing_handler import process_message, MessageProcessing
 from lib.redis_handler import RedisCache
 from lib.user_handler import User
 
@@ -15,6 +15,7 @@ class UserProcess:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def process_join_user(self, peer_data, peer_info, peer_jid, join_data):
         user_days = (time.time() - peer_info.creation_date_seconds) / 86400
@@ -56,10 +57,9 @@ class UserProcess:
                     print("Welcome Message Triggered")
                     if group_messages["welcome_message"] != "none":
                         # process and send welcome message
-                        welcome_message = process_message(self.config, "join", group_messages["welcome_message"], peer_jid,
-                                                       join_data["group_jid"],
-                                                       self.bot_id, round(np.ceil(user_days)))
-                        self.client.send_chat_message(join_data["group_jid"], welcome_message)
+                        MessageProcessing(self).process_message_media("welcome_message",
+                                                                      group_messages["welcome_message"], peer_jid,
+                                                                      join_data["group_jid"])
 
         elif group_settings["silent-join_status"] == 1:
             # silent join triggered
@@ -67,10 +67,9 @@ class UserProcess:
                 # welcome message triggered
                 if group_messages["welcome_message"] != "none":
                     # process and send welcome message
-                    welcome_message = process_message(self.config, "join", group_messages["welcome_message"], peer_jid,
-                                                      join_data["group_jid"],
-                                                      self.bot_id, round(np.ceil(user_days)))
-                    self.client.send_chat_message(join_data["group_jid"], welcome_message)
+                    MessageProcessing(self).process_message_media("welcome_message", group_messages["welcome_message"],
+                                                                  peer_jid,
+                                                                  join_data["group_jid"])
 
             # Start Silent Timer
             # Silent(client).silent_timeout(peer_jid, join_data["group_jid"], bot_id)
@@ -82,7 +81,5 @@ class UserProcess:
                 # welcome message triggered
                 if group_messages["welcome_message"] != "none":
                     # process and send welcome message
-                    welcome_message = process_message(self.config, "join", group_messages["welcome_message"], peer_jid,
-                                                      join_data["group_jid"],
-                                                      self.bot_id, round(np.ceil(user_days)))
-                    self.client.send_chat_message(join_data["group_jid"], welcome_message)
+                    MessageProcessing(self).process_message_media("welcome_message", group_messages["welcome_message"], peer_jid,
+                                          join_data["group_jid"])

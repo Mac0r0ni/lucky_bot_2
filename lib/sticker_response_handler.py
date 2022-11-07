@@ -12,6 +12,7 @@ class StickerResponse:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def parse_sticker_response(self, response):
         # Sticker Response

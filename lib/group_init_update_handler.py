@@ -11,6 +11,7 @@ class GroupInitUpdate:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def update_add_database(self, scope, group_hash, group_name, group_status, owner, admins, members,
                             group_jid, bot_id):

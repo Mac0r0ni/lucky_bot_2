@@ -4,6 +4,7 @@ import time
 
 from colorama import Fore, Style
 
+from lib.message_processing_handler import MessageProcessing
 from lib.redis_handler import RedisCache
 from lib.trigger_handler import process_image_sub
 
@@ -15,6 +16,7 @@ class ImageResponse:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def parse_image_response(self, response):
         # Image Response
@@ -54,6 +56,15 @@ class ImageResponse:
                                                                   response.group_jid)
                     RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"],
                                                                   response.group_jid)
+
+            media_message_queue = RedisCache(self.config).get_all_media_message_queue(response.group_jid)
+            for su in media_message_queue:
+                if str(su.decode("utf-8")) == response.from_jid:
+                    sub_data = json.loads(media_message_queue[su].decode('utf8'))
+                    if sub_data["response"][:2] == "$i":
+                        MessageProcessing(self).process_image_media(response, sub_data["type"],
+                                            sub_data["response"], response.image_url,
+                                            response.from_jid, response.group_jid)
 
             sub_queue = RedisCache(self.config).get_all_media_sub_queue(response.group_jid)
             for su in sub_queue:

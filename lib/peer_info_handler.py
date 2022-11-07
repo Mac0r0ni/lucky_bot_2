@@ -15,6 +15,7 @@ class PeerInfo:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def peer_info_parser(self, response):
         grab_queue = RedisCache(self.config).get_all_grab_queue(self.bot_id)

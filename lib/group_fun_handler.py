@@ -12,6 +12,7 @@ class ChanceGames:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def main(self, chat_message, prefix, name):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)

@@ -4,6 +4,7 @@
 # Python 3 Third Party Libraries
 
 # Python 3 Project Libraries
+import os
 import re
 
 from lib.database_handler import Database
@@ -17,6 +18,7 @@ class FeatureStatus:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def set_feature_status(self, chat_message, status, feature):
         exit_code = Database(self.config).change_feature_status(status, feature, chat_message.group_jid,
@@ -43,6 +45,7 @@ class FeatureStatus:
                                                   else feature_name + ": is already off.")
 
     def set_feature_message(self, chat_message, setting, value):
+        current_dir = os.getcwd() + "/"
         # remove \ from messages if they are in there. They do not convert to or from json correctly
         if "\\" in value:
             value = value.replace("\\", "")
@@ -58,6 +61,13 @@ class FeatureStatus:
                            setting.split("_")[1].capitalize()
         else:
             feature_name = str(setting.split("_")[0]).capitalize() + " " + str(setting.split("_")[1]).capitalize()
+
+        if current_dir in value and value[-4:] == "json":
+            value = "gif"
+        elif current_dir in value and value[-3:] == "png" or value[-3:] == "jpg":
+            value = "Image"
+        elif current_dir in value and value[-3:] == "mp4":
+            value = "Video"
 
         RemoteAdmin(self).send_message(chat_message,
                                               feature_name + " set to:\n {}".format(value) if exit_code == 1

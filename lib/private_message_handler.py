@@ -14,6 +14,7 @@ class PrivateMessage:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def private_message_parser(self, chat_message):
         if self.config["general"]["debug"] == 1:

@@ -1,7 +1,7 @@
 import time
 
 from lib.database_handler import Database
-from lib.message_processing_handler import process_message
+from lib.message_processing_handler import process_message, MessageProcessing
 from lib.redis_handler import RedisCache
 
 
@@ -12,6 +12,7 @@ class User:
         self.config = client.config
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
 
     def user_join_group(self, response, invite_status):
         display_name = response.status.split(" has joined the ")[0].rstrip()
@@ -118,10 +119,10 @@ class User:
                             print("Welcome Message Send")
                             # process_message_media(self.client, "welcome_message_pre", group_messages["welcome_message"], display_name, response.group_jid)
 
-                            welcome_message = process_message(self.config, "join_pre_queue",
-                                                           group_messages["welcome_message"],
-                                                           display_name, response.group_jid, self.bot_id, "0")
-                            self.client.send_chat_message(response.group_jid, welcome_message)
+                            MessageProcessing(self).process_message_media("welcome_message_pre",
+                                                                          group_messages["welcome_message"],
+                                                                          response.status_jid,
+                                                                          response.group_jid)
             # Next we update group owner/admins/members we do this on every join to keep database up to date.
             if response.group.is_public:
                 scope = "public"
