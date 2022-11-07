@@ -39,6 +39,7 @@ class User:
         # add user as friend to get data for name grab
         if group_settings["grab_status"] == 1:
             RedisCache(self.config).add_to_grab_queue(display_name, response.group_jid, self.bot_id)
+            self.client.add_friend(response.status_jid)
 
         if invite_status == 0:
             if group_status == 1:
