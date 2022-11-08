@@ -271,11 +271,12 @@ class Noob:
                 status = 1
             FeatureStatus(self).set_feature_status(chat_message, status, "noob_status")
 
-        elif prefix + "noob days" in s:  # admin
+        elif s[:10] == prefix + "noob days" in s:  # admin
             try:
                 d = int(s.split(prefix + "noob days ")[1])
                 FeatureStatus(self).set_feature_setting(chat_message, "noob_days", d)
-            except Exception:
+            except Exception as e:
+                print(repr(e))
                 RemoteAdmin(self).send_message(chat_message, "Give only a number after command\n Example: " + prefix + "noob days 10")
         elif s[:13] == prefix + "noob message":
             noob_msg = chat_message.body[14:]

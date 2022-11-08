@@ -234,8 +234,8 @@ class Database:
         if peer_jid in all_admins:
             group_settings = group_data["group_settings"]
             group_settings[setting] = value
-            query = f'UPDATE group_data SET group_settings = \'{json.dumps(group_settings)}\' WHERE group_jid = {group_jid}'
-            self.cursor.execute(query)
+            query = "UPDATE group_data SET group_settings = %s WHERE group_jid = %s"
+            self.cursor.execute(query, (json.dumps(group_settings), group_jid))
             self.connection.commit()
             self.cursor.close()
             self.connection.close()
