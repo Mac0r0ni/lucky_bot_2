@@ -57,21 +57,6 @@ def process_message(config, message_type, message, user_jid, group_jid, bot_id, 
                 if "$*" in l:
                     message = message.replace("$*", "🍀", 1)
         if "$ru" in message:
-            message_list = message.split(" ")
-            used_members = []
-            for w in message_list:
-                if "$ru" in w:
-                    member_list = []
-                    for m in user_info:
-                        if user_info[m]["display_name"] in bot_names:
-                            continue
-                        elif user_info[m]["display_name"] in used_members:
-                            continue
-                        else:
-                            member_list.append(user_info[m]["display_name"])
-                            used_members.append(user_info[m]["display_name"])
-                    member = random.choice(member_list)
-                    message = message.replace("$ru", member, 1)
             if "$ru{" in message:
                 random_users = message.count("$ru{")
                 selected_users = []
@@ -93,26 +78,30 @@ def process_message(config, message_type, message, user_jid, group_jid, bot_id, 
                                 else:
                                     talker_list.append(t)
 
-                        if len(talker_list) < random_users:
+                        if len(talker_list) >= random_users:
                             member = random.choice(talker_list)
                             selected_users.append(member)
                         else:
                             member = random.choice(selected_users)
-
                         message = message.replace("$ru{" + str(active) + "}", user_info[member]["display_name"], 1)
                     count += 1
 
             else:
                 message_list = message.split(" ")
+                used_members = []
                 for w in message_list:
                     if "$ru" in w:
-                        member_list = []
+                        active_member_list = []
                         for m in user_info:
                             if user_info[m]["display_name"] in bot_names:
                                 continue
+                            elif user_info[m]["display_name"] in used_members:
+                                continue
                             else:
-                                member_list.append(user_info[m]["display_name"])
-                        member = random.choice(member_list)
+                                active_member_list.append(user_info[m]["display_name"])
+
+                        member = random.choice(active_member_list)
+                        used_members.append(member)
                         message = message.replace("$ru", member, 1)
         if "$rn" in message:
             if "$rn{" in message:

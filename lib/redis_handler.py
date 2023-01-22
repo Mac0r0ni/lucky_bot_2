@@ -4,6 +4,7 @@ import json
 
 # Python 3 Third Party Libraries
 import redis
+from colorama import Fore, Style
 
 
 # Python 3 Project Libraries
@@ -15,6 +16,10 @@ class RedisCache:
         self.redis_port = config_data["redis"]["port"]
         self.redis_password = config_data["redis"]["password"]
         self.config = config_data
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
         if config_data["redis"]["password"]:
             self.r = redis.Redis(
@@ -31,22 +36,17 @@ class RedisCache:
     # ------------------------------------
 
     # uses pipe to add all data to cache
-    def add_to_cache(self, data, cache_type):
+    def add_to_cache(self, data, column_list):
         # opens the pipe line
         with self.r.pipeline() as pipe:
             # iterate out data
             for k in data:
-                if cache_type == "group":
-                    key = str(k["group_jid"])
-                elif cache_type == "bot":
-                    key = "bot_" + str(k["bot_id"])
                 i = 1
                 # iterate our column list
-                for c in k:
+                for c in column_list:
                     # set the column/value in cache
-                    pipe.hset(key, c, str(k[c]))
+                    pipe.hset(k[0], c, str(k[i]))
                     i += 1
-                pipe.hset(key, "last_save", time.time())
             # Finalize the pipe by executing
             pipe.execute()
 
@@ -55,7 +55,7 @@ class RedisCache:
         data = self.r.hget(str(group_jid), key)
         if data:
             if type == "json" or type == "list":
-                return json.loads(data, strict=False)
+                return json.loads(data)
             elif type == "str":
                 return str(data.decode("utf-8"))
             elif type == "int":
@@ -73,9 +73,8 @@ class RedisCache:
             for key, value in data.items():
                 if value.decode().startswith("{") or value.decode().startswith("["):
                     try:
-                        group_data[key.decode("utf-8")] = json.loads(value.decode("utf8"), strict=False)
+                        group_data[key.decode("utf-8")] = json.loads(value.decode("utf8"))
                     except Exception as e:
-                        print(value.decode('utf-8'))
                         print(repr(e))
                         return False
 
@@ -92,7 +91,6 @@ class RedisCache:
         group_jid = group_jid.split('@')[0]
         data = self.r.hgetall(str(group_jid))
         if data:
-            print(type(value))
             if type(value) is list or type(value) is dict:
                 self.r.hset(str(group_jid), key, json.dumps(value))
                 return True
@@ -113,20 +111,19 @@ class RedisCache:
     def add_single_talker_lurker(self, activity, user_jid, group_jid):
         data = self.r.hget(group_jid.split('@')[0], activity)
         if data:
-            data_json = json.loads(data, strict=False)
+            data_json = json.loads(data)
             data_json[user_jid] = 0
             self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
         else:
-            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"), strict=False)
+            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
             if members:
-                RedisCache(self.config).add_all_talker_lurker("talker", members, group_jid)
-                RedisCache(self.config).add_all_talker_lurker("lurker", members, group_jid)
-
+                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
+                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
 
     def remove_single_talker_lurker(self, activity, user_jid, group_jid):
         data = self.r.hget(group_jid.split('@')[0], activity)
         if data:
-            data_json = json.loads(data, strict=False)
+            data_json = json.loads(data)
             if user_jid in data_json:
                 del data_json[user_jid]
                 self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
@@ -134,19 +131,19 @@ class RedisCache:
     def set_single_talker_lurker(self, activity, time, user_jid, group_jid):
         data = self.r.hget(group_jid.split('@')[0], activity)
         if data:
-            data_json = json.loads(data, strict=False)
+            data_json = json.loads(data)
             data_json[user_jid] = time
             self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
         else:
-            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"), strict=False)
+            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
             if members:
-                RedisCache(self.config).add_all_talker_lurker("talker", members, group_jid)
-                RedisCache(self.config).add_all_talker_lurker("lurker", members, group_jid)
+                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
+                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
 
     def get_all_talker_lurkers(self, activity, group_jid):
         data = self.r.hget(group_jid.split('@')[0], activity)
         if data:
-            data_json = json.loads(data, strict=False)
+            data_json = json.loads(data)
             return data_json
         else:
             return False
@@ -182,7 +179,7 @@ class RedisCache:
     def get_timer_cache(self, peer_jid, group_jid):
         data = self.r.hget(group_jid.split('@')[0] + "_timer_cache", peer_jid)
         if data:
-            return json.loads(data, strict=False)
+            return json.loads(data)
         else:
             return False
 
@@ -222,7 +219,7 @@ class RedisCache:
     def update_group_queue_json(self, key, value, group_jid, bot_id):
         data = self.r.hget(str(bot_id) + "_group_queue", group_jid)
         if data:
-            group_data = json.loads(data, strict=False)
+            group_data = json.loads(data)
             group_data[key] = value
             self.r.hset(str(bot_id) + "_group_queue", group_jid, json.dumps(group_data))
         else:
@@ -231,7 +228,7 @@ class RedisCache:
     def get_single_group_queue(self, group_jid, bot_id):
         group = self.r.hget(str(bot_id) + "_group_queue", group_jid)
         if group is not None:
-            return json.loads(group, strict=False)
+            return json.loads(group)
         else:
             return False
 
@@ -246,10 +243,10 @@ class RedisCache:
     # -----------------------------------------
 
     def get_bot_config_data(self, type, key, bot_id):
-        data = self.r.hget("bot_" + str(bot_id), key)
+        data = self.r.hget(str(bot_id), key)
         if data:
             if type == "json" or type == "list":
-                return json.loads(data, strict=False)
+                return json.loads(data)
             elif type == "str":
                 return str(data.decode())
             elif type == "int":
@@ -261,11 +258,11 @@ class RedisCache:
 
     def get_all_bot_config_data(self, bot_id):
         bot_config_data = {}
-        data = self.r.hgetall("bot_" + str(bot_id))
+        data = self.r.hgetall(str(bot_id))
         if data:
             for key, value in data.items():
                 if value.decode().startswith("{") or value.decode().startswith("["):
-                    bot_config_data[key.decode("utf-8")] = json.loads(value, strict=False)
+                    bot_config_data[key.decode("utf-8")] = json.loads(value)
                 elif value.decode().isnumeric():
                     bot_config_data[key.decode("utf-8")] = int(value.decode())
                 else:
@@ -292,7 +289,7 @@ class RedisCache:
     def get_peer_data(self, display_name, bot_id):
         data = self.r.hget(str(bot_id) + "_peer_data", display_name)
         if data:
-            return json.loads(data, strict=False)
+            return json.loads(data)
         else:
             return False
 
@@ -316,7 +313,7 @@ class RedisCache:
     def get_single_last_queue(self, last_type, group_jid):
         user_data = self.r.hget(group_jid + f'_last_{last_type}_queue', "last")
         if user_data is not None:
-            return json.loads(user_data, strict=False)
+            return json.loads(user_data)
         else:
             return False
 
@@ -347,7 +344,7 @@ class RedisCache:
     def get_single_join_queue(self, peer_jid, bot_id):
         user_data = self.r.hget(str(bot_id) + "_join_queue", peer_jid)
         if user_data is not None:
-            return json.loads(user_data, strict=False)
+            return json.loads(user_data)
         else:
             return False
 
@@ -383,7 +380,7 @@ class RedisCache:
     def get_single_grab_queue(self, peer_display_name, bot_id):
         data = self.r.hget(str(bot_id) + "_grab_queue", peer_display_name)
         if data is not None:
-            return json.loads(data, strict=False)
+            return json.loads(data)
         else:
             return False
 
@@ -406,7 +403,7 @@ class RedisCache:
             return False
 
     def update_remote_session_data(self, user_jid, key, value, bot_id):
-        remote_session_data = json.loads(self.r.hget(str(bot_id) + "_remote_session_data", user_jid))
+        remote_session_data = RedisCache(self.config).get_remote_session_data(user_jid, bot_id)
         if remote_session_data:
             remote_session_data[key] = value
             self.r.hset(str(bot_id) + "_remote_session_data", user_jid, json.dumps(remote_session_data))
@@ -418,7 +415,7 @@ class RedisCache:
     def get_remote_session_data(self, user_jid, bot_id):
         data = self.r.hget(str(bot_id) + "_remote_session_data", user_jid)
         if data:
-            return json.loads(data, strict=False)
+            return json.loads(data)
         else:
             return False
 
@@ -438,7 +435,7 @@ class RedisCache:
 
     def get_single_media_sub_queue(self, peer_jid, group_jid):
         sub_queue = self.r.hget(group_jid + "_sub_queue", peer_jid)
-        result = json.loads(sub_queue, strict=False)
+        result = json.loads(sub_queue)
         if result is not None:
             return result
         else:
@@ -479,3 +476,147 @@ class RedisCache:
 
     def rem_from_media_message_queue(self, peer_jid, group_jid):
         self.r.hdel(group_jid + "_message_queue", peer_jid)
+
+    # ------------------------------------
+    #  Redis Cache - Heartbeat Cache
+    # ------------------------------------
+
+    def get_heartbeat_data(self, bot_id):
+        heartbeat_data = self.r.hget(str(bot_id) + "_heartbeat", "heartbeat")
+        if heartbeat_data:
+            res = json.loads(heartbeat_data)
+            return res
+        else:
+            return False
+
+    def update_heartbeat_data(self, heartbeat_data, bot_id):
+        self.r.hset(str(bot_id) + "_heartbeat", "heartbeat", json.dumps(heartbeat_data))
+
+    def rem_heartbeat_data(self, bot_id):
+        self.r.hdel(str(bot_id) + "_heartbeat", "heartbeat")
+
+    # ------------------------------------
+    #  Redis Cache - Group Censor Cache
+    # ------------------------------------
+
+    def add_censor_cache(self, peer_jid, group_jid):
+        peer_data = {"warn_time": time.time()}
+        self.r.hset(group_jid.split('@')[0] + "_censor_cache", peer_jid, json.dumps(peer_data))
+
+    def get_all_censor_cache(self, group_jid):
+        data = self.r.hgetall(group_jid.split('@')[0] + "_censor_cache")
+        if data:
+            return data
+        else:
+            return False
+
+    def get_censor_cache(self, peer_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0] + "_censor_cache", peer_jid)
+        if data:
+            return json.loads(data)
+        else:
+            return False
+
+    def rem_from_censor_cache(self, peer_jid, group_jid):
+        self.r.hdel(group_jid.split('@')[0] + "_censor_cache", peer_jid)
+
+    # ------------------------------------
+    #  Redis Cache - Media Forward Queue
+    # ------------------------------------
+
+    def add_to_media_forward_queue(self, peer_jid, group_jid, bot_id):
+        forward_data = {"group_jid": group_jid, "time": time.time()}
+        self.r.hset(str(bot_id) + "_forward_queue", peer_jid, json.dumps(forward_data))
+
+    def get_single_media_forward_queue(self, peer_jid, bot_id):
+        sub_queue = self.r.hget(str(bot_id) + "_forward_queue", peer_jid)
+        result = json.loads(sub_queue)
+        if result is not None:
+            return result
+        else:
+            return None
+
+    def get_all_media_forward_queue(self, bot_id):
+        sub_queue = self.r.hgetall(str(bot_id) + "_forward_queue")
+        if sub_queue is not None:
+            return sub_queue
+        else:
+            return None
+
+    def rem_from_media_forward_queue(self, peer_jid, bot_id):
+        self.r.hdel(str(bot_id) + "_forward_queue", peer_jid)
+
+
+    # --------------------------------------
+    #  Redis Cache - Group Command Cooldowns
+    # --------------------------------------
+
+    def add_to_group_cooldown(self, cooldown_name, group_jid):
+        now = time.time()
+        self.r.hset(group_jid + "_group_cooldown_queue", cooldown_name, now)
+
+    def get_from_group_cooldown(self, cooldown_name, group_jid):
+        cooldown_time = self.r.hget(group_jid + "_group_cooldown_queue", cooldown_name)
+        if cooldown_time is not None:
+            return cooldown_time
+        else:
+            return 0
+
+    def remove_from_group_cooldown(self, cooldown_name, group_jid):
+        self.r.hdel(group_jid + "_group_cooldown_queue", cooldown_name)
+
+    def remove_all_group_cooldown(self, group_jid):
+        self.r.delete(group_jid + "_group_cooldown_queue")
+
+    # ------------------------------------
+    #  Redis Cache - Group/User Activity History
+    # ------------------------------------
+
+    def add_single_talker_lurker(self, activity, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], activity)
+        if data:
+            data_json = json.loads(data)
+            data_json[user_jid] = 0
+            self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+        else:
+            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
+            if members:
+                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
+                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
+
+    def remove_single_talker_lurker(self, activity, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], activity)
+        if data:
+            data_json = json.loads(data)
+            if user_jid in data_json:
+                del data_json[user_jid]
+                self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+
+    def set_single_talker_lurker(self, activity, time, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], activity)
+        if data:
+            data_json = json.loads(data)
+            data_json[user_jid] = time
+            self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+        else:
+            members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
+            if members:
+                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
+                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
+
+    def get_all_talker_lurkers(self, activity, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], activity)
+        if data:
+            data_json = json.loads(data)
+            return data_json
+        else:
+            return False
+
+    def add_all_talker_lurker(self, activity, member_list, group_jid):
+        data = {}
+        for m in member_list:
+            data[m] = 0
+        self.r.hset(group_jid.split('@')[0], activity, json.dumps(data))
+
+    def remove_all_talker_lurkers(self, activity, group_jid):
+        self.r.delete(group_jid.split('@')[0], activity)

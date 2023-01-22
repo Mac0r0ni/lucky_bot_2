@@ -14,6 +14,10 @@ class GroupSysMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def group_sys_message_parser(self, response):
         if self.config["general"]["debug"] == 1:
@@ -60,7 +64,8 @@ class GroupSysMessage:
                     return
 
             count = Database(self.config).get_bot_group_count(self.bot_id)
-            if count["total"] >= self.config["general"]["max_groups"]:
+            print(count)
+            if count >= self.config["general"]["max_groups"]:
                 self.client.send_chat_message(response.group_jid, "I am at max groups. Later boners!")
                 self.client.leave_group(response.group_jid)
                 return

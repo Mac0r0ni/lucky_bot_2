@@ -1,13 +1,17 @@
 import random
+import re
 import time
 
 from colorama import Fore, Style
 
 from lib.database_handler import Database
-from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification, GroupTimer, LeaveMessage
+from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification, GroupTimer, LeaveMessage, \
+    BotHelpers, Silent, Censor, Forward, Profile, Purge, UserCap, Whitelist, BotSFW, BackupRestore, DataTransfer
 from lib.group_fun_handler import ChanceGames
+from lib.message_processing_handler import process_message
 from lib.redis_handler import RedisCache
 from lib.remote_admin_handler import RemoteAdmin
+from lib.search_handler import Search
 from lib.talkers_lurkers_handler import TalkerLurker
 from lib.trigger_handler import Triggers
 from lib.user_handler import User
@@ -21,10 +25,14 @@ class GroupMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def group_message_parser(self, chat_message):
-        if self.config["general"]["debug"] == 1 or self.config["general"]["debug"] == 2:
-            print(Fore.LIGHTGREEN_EX + f'[+] {chat_message.from_jid} from group ID {chat_message.group_jid} says: {chat_message.body}' + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 1:
+            print(self.debug + f'{chat_message.from_jid} from group ID {chat_message.group_jid} says: {chat_message.body}' + Style.RESET_ALL)
 
         gm = chat_message.body.lower()  # Get group message and make it lowercase
         prefix = self.config["general"]["prefix"]
@@ -32,14 +40,20 @@ class GroupMessage:
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
         try:
             group_settings = group_data["group_settings"]
+            group_members = group_data["group_members"]
             group_admins = group_data["group_admins"]
+            censor_words = group_data["censor_words"]
+            group_messages = group_data["group_messages"]
         except Exception as e:
             return
-        funny_names = ["Champ", "Young man", "Whats her face", "Chump", "Dingus", "McTitsMcGee"]
+
         try:
             name = group_data["group_members"][chat_message.from_jid]["display_name"]
         except:
-            name = random.choice(funny_names)
+            if group_settings["sfw_status"] == 1:
+                name = random.choice(self.config["responses"]["sfw_names"])
+            else:
+                name = random.choice(self.config["responses"]["nsfw_names"])
 
         if "46.30." in gm or "91.228." in gm or "212.224." in gm or "195.245." in gm or "to show you my naked pics" in gm or "let's fun " in gm or "lets fun " in gm:
             user_info = RedisCache(self.config).get_single_last_queue("joiner", chat_message.group_jid)
@@ -52,9 +66,11 @@ class GroupMessage:
 
                 # add talker/lurker time
         RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), chat_message.from_jid, chat_message.group_jid)
+        RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), chat_message.from_jid, chat_message.group_jid)
 
-        if name == "Rage bot" or name == "Navi 🦋" or name == "C​а​s​i​n​ο​ B​ο​t​":
-            return
+        if group_settings["bot-helper_status"] == 0:
+            if name == "Rage bot" or name == "Navi 🦋" or name == "C​а​s​i​n​ο​ B​ο​t​":
+                return
 
         if group_settings["verification_status"] == 1:
             join_queue = RedisCache(self.config).get_all_join_queue(self.bot_id)
@@ -67,6 +83,75 @@ class GroupMessage:
                                 Verification(self).eval_message(chat_message.from_jid,
                                                                        chat_message.group_jid, chat_message.body)
                                 return
+
+        if group_settings["censor_status"] >= 1:
+            if chat_message.from_jid not in group_members:
+                return
+            if chat_message.from_jid not in group_admins:
+                #if "cap_whitelist" not in members[chat_message.from_jid]:
+                #    members[chat_message.from_jid]["cap_whitelist"] = 0
+                #    Database().update_group_json("group_members", members, chat_message.group_jid)
+                #    members = RedisCache().get_group_json("group_members", chat_message.group_jid)
+                if group_members[chat_message.from_jid]["cap_whitelist"] == 0:
+                    censored = False
+                    word = ""
+                    if group_settings["censor_status"] == 1:
+                        for c in censor_words:
+                            if chat_message.body.lower() == c.lower():
+                                word = c
+                                censored = True
+                    elif group_settings["censor_status"] == 2:
+                        for w in censor_words:
+                            result = re.search(r"\b{}\b".format(w), gm, re.IGNORECASE)
+                            if result:
+                                word = w
+                                censored = True
+                    if censored:
+                        if group_settings["censor_time"] >= 1:
+                            warned = RedisCache(self.config).get_all_censor_cache(chat_message.group_jid)
+                            if not warned:
+                                warned = {"None": "None"}
+                            if chat_message.from_jid.encode("utf-8") in warned:
+                                user_info = RedisCache(self.config).get_censor_cache(chat_message.from_jid, chat_message.group_jid)
+                                warn_time = (int(user_info["warn_time"]))
+                                now = time.time()
+                                a = float(now) - float(warn_time)
+                                if a < int(group_settings["censor_time"]):
+                                    remove_message = process_message(self.config, "group", group_messages["censor-kick_message"],
+                                                                     chat_message.from_jid,
+                                                                     chat_message.group_jid, self.bot_id, "245")
+                                    self.client.send_chat_message(chat_message.group_jid, remove_message)
+                                    self.client.remove_peer_from_group(chat_message.group_jid, chat_message.from_jid)
+                                    RedisCache(self.config).rem_from_censor_cache(chat_message.from_jid, chat_message.group_jid)
+                                    return
+                                else:
+                                    warn_message = process_message(self.config, "group", group_messages["censor-warn_message"].replace("$cw", word),
+                                                                     chat_message.from_jid,
+                                                                     chat_message.group_jid, self.bot_id, "245")
+                                    self.client.send_chat_message(chat_message.group_jid, warn_message)
+
+                                    RedisCache(self.config).add_censor_cache(chat_message.from_jid, chat_message.group_jid)
+                                    return
+                            else:
+                                warn_message = process_message(self.config, "group",
+                                                               group_messages["censor-warn_message"].replace("$cw",
+                                                                                                             word),
+                                                               chat_message.from_jid,
+                                                               chat_message.group_jid, self.bot_id, "245")
+                                self.client.send_chat_message(chat_message.group_jid, warn_message)
+                                RedisCache(self.config).add_censor_cache(chat_message.from_jid, chat_message.group_jid)
+                                return
+
+                        else:
+                            remove_message = process_message(self.config, "group",
+                                                             group_messages["censor-kick_message"],
+                                                             chat_message.from_jid,
+                                                             chat_message.group_jid, self.bot_id, "245")
+                            self.client.send_chat_message(chat_message.group_jid, remove_message)
+                            self.client.remove_peer_from_group(chat_message.group_jid, chat_message.from_jid)
+                            User(self).group_user_remove(chat_message.from_jid, chat_message.group_jid)
+                            RedisCache(self.config).rem_from_censor_cache(chat_message.from_jid, chat_message.group_jid)
+                            return
 
         if gm.split()[0][0] == prefix:
             # if message starts with the prefix
@@ -88,6 +173,39 @@ class GroupMessage:
             elif prefix + "invite" in gm:
                 Invite(self).main(chat_message, prefix)
                 return
+            elif prefix + "helper" in gm:
+                BotHelpers(self).main(chat_message, prefix)
+                return
+            elif prefix + "silent" in gm:
+                Silent(self).main(chat_message, prefix)
+                return
+            elif prefix + "censor" in gm or prefix + "cmode" in gm:
+                Censor(self).main(chat_message, prefix)
+                return
+            elif prefix + "bypass" in gm or prefix + "forward" in gm:
+                Forward(self).main(chat_message, prefix)
+                return
+            elif prefix + "pfp" in gm:
+                Profile(self).main(chat_message, prefix)
+                return
+            elif prefix + "cap" in gm:
+                UserCap(self).main(chat_message, prefix)
+                return
+            elif prefix + "whitelist" in gm:
+                Whitelist(self).main(chat_message, prefix)
+                return
+            elif prefix + "purge" in gm:
+                Purge(self).main(chat_message, prefix)
+                return
+            elif prefix + "sfw" in gm:
+                BotSFW(self).main(chat_message, prefix)
+                return
+            elif gm == prefix + "backup" or prefix + "restore" in gm:
+                BackupRestore(self).main(chat_message, prefix)
+                return
+            elif prefix + "transfer" in gm:
+                DataTransfer(self).main(chat_message, prefix, "gm")
+                return
             elif gm == prefix + "grab" or gm == prefix + "grab status":
                 # grab username change and status
                 NameGrab(self).main(chat_message, prefix)
@@ -100,6 +218,9 @@ class GroupMessage:
                 return
             elif prefix + "timer" in gm:
                 GroupTimer(self).main(chat_message, prefix)
+                return
+            elif prefix + "search" in gm or prefix + "youtube" in gm or prefix + "yt" in gm or prefix + "who" in gm or prefix + "urban" in gm:
+                Search(self).main(chat_message, prefix)
                 return
             elif gm == prefix + "gjid":  # check if the message is equal to gjid
                 # if it is send a group message with the group jid
@@ -116,15 +237,20 @@ class GroupMessage:
                 return
 
             elif gm == prefix + "leave":
-                deny_resp = ["Nice try dingus.", "Uhh No?", "Make me, " + name, "What if I don't want to?", "You don't have the power, nerrrrd.", "Maybe if you ask nicely. Nah, just kidding."]
-                leave_response = ["Later boners.", "I didn't want to be here anyway.", "With pleasure... gross.", "Fine.... jerk.", "I'll start my own group then.. with hookers and Blackjack. Infact forget the Blackjack!", "I don't like you anyway. " + name, name + ", is a jerky-mc-jerkass and tried to get in my pants."]
+
+                if group_settings["sfw_status"] == 1:
+                    deny_resp = self.config["responses"]["sfw_leave_deny"]
+                    leave_response = self.config["responses"]["sfw_leave"]
+                else:
+                    deny_resp = self.config["responses"]["nsfw_leave_deny"]
+                    leave_response = self.config["responses"]["nsfw_leave"]
                 if group_admins:
                     if chat_message.from_jid in group_admins:
-                        self.client.send_chat_message(chat_message.group_jid, random.choice(leave_response))
+                        self.client.send_chat_message(chat_message.group_jid, str(random.choice(leave_response))).format(name)
                         self.client.leave_group(chat_message.group_jid)
                         Database(self.config).remove_group(chat_message.group_jid)
                 else:
-                    RemoteAdmin(self).send_message(chat_message, random.choice(deny_resp))
+                    RemoteAdmin(self).send_message(chat_message, str(random.choice(deny_resp))).format(name)
 
             elif gm == prefix + "members":
                 bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
@@ -164,22 +290,35 @@ class GroupMessage:
                                 RemoteAdmin(self).send_message(chat_message, list_message_1)
                                 RemoteAdmin(self).send_message(chat_message, list_message_2)
                     else:
-                        RemoteAdmin(self).send_message(chat_message, "Fuck off, you aren't an admin...")
+                        if group_settings["sfw_status"] == 1:
+                            RemoteAdmin(self).send_message(chat_message, "Nope, you aren't an admin...")
+                        else:
+                            RemoteAdmin(self).send_message(chat_message, f"Fuck off, you aren't an admin {name}.")
         else:
             if gm == "ping":
-                ping_resp = ["What do you want boner?", "Yea I am here.. Unfortunately", "Polo... wait no Pong", "The person ^ gives good head.", "I'm with stupid ^", "Damn, you are so annoying.", "Ping your damn self.", "Hey dingus.", "Uhhh, I don't give a shit.", "Clingy much? Fuck dude..."]
-                RemoteAdmin(self).send_message(chat_message, random.choice(ping_resp))
+                if group_settings["sfw_status"] == 1:
+                    ping_resp = self.config["responses"]["sfw_ping"]
+                else:
+                    ping_resp = self.config["responses"]["nsfw_ping"]
+                RemoteAdmin(self).send_message(chat_message, str(random.choice(ping_resp)).format(name))
 
             elif "🎲" in gm and gm.split()[0][0] == "🎲":
                 ChanceGames(self).main(chat_message, prefix, name)
+
+            elif "-censor" in gm and gm.split()[0] == "-censor":
+                Censor(self).main(chat_message, prefix)
+                return
 
             elif " >>+ " in gm or " >>- " in gm or " >+ " in gm or " >- " in gm or " > " in gm or " >> " in gm and "\">>\"" not in gm and "\">\"" not in gm:
                 Triggers(self).main(chat_message, prefix)
                 return
 
             elif gm == 'hey' or gm == "hello" or gm == "hi" or gm == "yo":
-                greetings = ["What’s kickin’, " + name, "‘Ello, gov'nor!", "What's up bitches?", "Hey-oooo!", "What up forknuts?", "Ehh, It's " + name]
-                RemoteAdmin(self).send_message(chat_message, random.choice(greetings))
+                if group_settings["sfw_status"] == 1:
+                    greetings = self.config["responses"]["sfw_greetings"]
+                else:
+                    greetings = self.config["responses"]["nsfw_greetings"]
+                RemoteAdmin(self).send_message(chat_message, str(random.choice(greetings)).format(name))
                 return
 
             else:

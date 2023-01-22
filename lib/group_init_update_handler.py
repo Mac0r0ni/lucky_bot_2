@@ -1,5 +1,7 @@
 import time
 
+from colorama import Style, Fore
+
 from lib.database_handler import Database
 from lib.redis_handler import RedisCache
 
@@ -12,11 +14,35 @@ class GroupInitUpdate:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def update_add_database(self, scope, group_hash, group_name, group_status, owner, admins, members,
                             group_jid, bot_id):
         if group_status == 1:
             # group already in database, we are just updating name/owner/members/admins
+            talkers = RedisCache(self.config).get_all_talker_lurkers("talkers", group_jid)
+            lurkers = RedisCache(self.config).get_all_talker_lurkers("lurkers", group_jid)
+            remove_talkers = []
+            remove_lurkers = []
+            for t in talkers:
+                if t not in members:
+                    remove_talkers.append(t)
+            for l in lurkers:
+                if l not in members:
+                    remove_lurkers.append(l)
+            for m in members:
+                if m not in talkers:
+                    RedisCache(self.config).add_single_talker_lurker("talkers", m, group_jid)
+                if m not in lurkers:
+                    RedisCache(self.config).add_single_talker_lurker("lurkers", m, group_jid)
+            for rt in remove_talkers:
+                RedisCache(self.config).remove_single_talker_lurker("talkers", rt, group_jid)
+            for rl in remove_lurkers:
+                RedisCache(self.config).remove_single_talker_lurker("lurkers", rl, group_jid)
+
             Database(self.config).update_group_database(group_jid, group_name, owner, admins, members)
 
         elif group_status == 0:
@@ -38,8 +64,8 @@ class GroupInitUpdate:
                               "noob_status": 1, "noob_days": 10, "media-forward_status": 0, "trigger_status": 2,
                               "rank_status": 0, "profile_status": 1, "grab_status": 0, "censor_status": 0,
                               "censor_time": 1800, "cap_status": 0, "cap_users": 98, "bot-helper_status": 0, "casino_status": 0,
-                              "slots_jackpot": 500,
-                              "roast_status": 0, "confessions_status": 0, "dice_default": 6, }
+                              "slots_jackpot": 500, "sfw_status": 0,
+                              "roast_status": 0, "confessions_status": 0, "dice_default": 6}
             group_messages = {"welcome_message": "Welcome!", "lock_message": "Group is Locked",
                               "exit_message": "Bye $u",
                               "global-ban_message": "$u, You have too many global bans to join. $gb bans!",
@@ -57,6 +83,7 @@ class GroupInitUpdate:
 
             user_triggers = {}
             admin_triggers = {}
+            censor_words = {}
 
             # remove existing talkers/lurkers
             RedisCache(self.config).remove_all_talker_lurkers("talkers", group_jid)
@@ -68,7 +95,7 @@ class GroupInitUpdate:
 
 
             Database(self.config).add_group_to_database(group_jid, group_hash, group_name, group_settings, group_messages,
-                                             owner, admins, members, user_triggers, admin_triggers, bot_id)
+                                             owner, admins, members, user_triggers, admin_triggers, censor_words, bot_id)
 
             self.client.send_chat_message(group_jid, "Done Initializing Database!")
 

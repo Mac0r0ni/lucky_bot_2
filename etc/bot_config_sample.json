@@ -6,7 +6,13 @@
   },
   "paths": {
     "trigger_media": "var/media/trigger/",
-    "message_media": "var/media/message/"
+    "message_media": "var/media/message/",
+    "youtube_media": "var/media/youtube/",
+    "user_img": "var/pfp_images/",
+    "forward_img": "var/media/forward/",
+    "backup": "var/backups/",
+    "sub_media_backup": "var/backups/sub_media_backup/",
+    "message_media_backup": "var/backups/message_media_backup/"
   },
   "mysql": {
     "hostname": "",
@@ -19,5 +25,26 @@
     "hostname": "",
     "port": 6379,
     "password": ""
+  },
+  "email": {
+    "smtp_hostname": "",
+    "smtp_port": 587,
+    "smtp_username": "",
+    "smtp_password": "",
+    "email_address_from": "",
+    "email_text_from": "",
+    "address_list": [""]
+  },
+  "responses": {
+    "sfw_names": ["Chump", "Chumpette", "Dingus", "Benedict Cum-ber-dumpster", "Tits McGee", "Dickweed", "Dillhole", "Buttmunch"],
+    "nsfw_names": ["Bro", "Lady", "Mister", "Miss", "Champ", "Young man", "Whats her face"],
+    "sfw_leave_deny": ["Nice try, but no.", "Nope", "Make me, {}", "I don't have to.", "You are not an admin, so no.", "Ugh, not now I am busy.", "Maybe if you ask nicely. Nah, just kidding."],
+    "nsfw_leave_deny": ["Nice try dingus.", "Uhh No?", "Make me ya slut bucket.", "What if I don't want to?", "Nice try asshat.", "Maybe if you ask nicely. Nah, just kidding fucker."],
+    "sfw_leave": ["Later!", "I know when I am not wanted.", "Sure, I will go then.", "have a good one.", "I am taking all your admins with me. Come on guys!"],
+    "nsfw_leave": ["Later boners.", "This is a shit show anyway.", "With pleasure... this groups is gross.", "Fine.... but before I go....\nSUCK IT TREBEK.", "I'll start my own group then.. with bot hookers and Blackjack. Infact forget the Blackjack!", "Thank god, I thought you would never ask.", "{}, is a jerky-mc-jerkass and tried to get in my pants.", "WTF Bro? Fine stick with Navi. Bitch ass fairy anyway.", "FUCK YES, FINALLY.", "I am out bitches!"],
+    "sfw_ping": ["Yes?", "You rang?", "What do you want now?", "Polo... wait no Pong", "Long Pong Silver", "I am still here.", "Alive and kickin' it."],
+    "nsfw_ping": ["What do you want dillhole?", "Yea I am here.. Unfortunately", "Long Dong PONG", "The person ^ gives good head.", "I'm with stupid ^", "Damn, you are so annoying.", "Ping your damn self.", "STOP TOUCHING ME THERE", "Uhhh, I don't give a shit.", "Clingy much? Fuck dude...", "WTF Bro, you wanna go?", "I would totally bone ^! So hot...", "Oh yea HARDER!", "OH GOD YES, I am going to cum if you ping me again!"],
+    "sfw_greeting": ["What’s kickin’, {}", "‘Ello, gov'nor!", "What's up?", "Hey-oooo!", "Hey, It's {}"],
+    "nsfw_greeting": ["Sup slut?", "Great.. this person again. {} get a life.", "{} we get it, you are starved for attention.", "Oh shit, {} is one sexy member.", "Hey {}, you mind if I slide and send some nudes?", "HeEeeEEYY YooOOoUUu GuUuYySsS!", "Hey yourself, dick.", "Fuck yea! {}, Whats upppp?", "{}, likes anal."]
   }
 }

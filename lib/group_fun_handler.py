@@ -1,5 +1,7 @@
 import random
 
+from colorama import Style, Fore
+
 from lib.feature_status_handler import FeatureStatus
 from lib.redis_handler import RedisCache
 from lib.remote_admin_handler import RemoteAdmin
@@ -13,6 +15,10 @@ class ChanceGames:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix, name):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)

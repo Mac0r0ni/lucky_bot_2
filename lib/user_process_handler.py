@@ -1,8 +1,13 @@
+import os
+import shutil
 import time
 
 import numpy as np
+import requests
+from colorama import Style, Fore
 
-from lib.group_admin_tools import Verification
+from lib.group_admin_tools import Verification, Silent
+from lib.image_response_handler import check_pfp
 from lib.message_processing_handler import process_message, MessageProcessing
 from lib.redis_handler import RedisCache
 from lib.user_handler import User
@@ -16,6 +21,10 @@ class UserProcess:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def process_join_user(self, peer_data, peer_info, peer_jid, join_data):
         user_days = (time.time() - peer_info.creation_date_seconds) / 86400
@@ -32,6 +41,35 @@ class UserProcess:
         if peer_data:
             if group_settings["profile_status"] == 1:
                 print("Process Default PFP")
+                if peer_data["pfp"] == "default.jpg":
+                    self.client.send_chat_message(join_data["group_jid"],
+                                                  "You need to set a profile picture to join this group.")
+                    self.client.remove_peer_from_group(join_data["group_jid"], peer_jid)
+                    User(self).group_user_remove(peer_jid, join_data["group_jid"])
+                    if os.path.exists(self.config["paths"]["user_img"] + peer_jid + ".jpg"):
+                        os.remove(self.config["paths"]["user_img"] + peer_jid + ".jpg")
+                    return
+
+                picurl = requests.get(peer_data["pfp"], stream=True)
+                if picurl.status_code == 200:
+                    save_path = self.config["paths"]["user_img"] + peer_jid + ".jpg"
+                    with open(save_path, 'wb') as f:
+                        picurl.raw.decode_content = True
+                        shutil.copyfileobj(picurl.raw, f)
+                        f.close()
+                    if os.path.exists(self.config["paths"]["user_img"] + peer_jid + ".jpg"):
+                        result = check_pfp(self.config, peer_jid)
+                        if result >= 1:
+                            self.client.send_chat_message(join_data["group_jid"],
+                                                     "You need to set a profile picture to join this group.")
+                            self.client.remove_peer_from_group(join_data["group_jid"], peer_jid)
+                            User(self).group_user_remove(peer_jid, join_data["group_jid"])
+                            if os.path.exists(self.config["paths"]["user_img"] + peer_jid + ".jpg"):
+                                os.remove(self.config["paths"]["user_img"] + peer_jid + ".jpg")
+                            return
+                        else:
+                            if os.path.exists(self.config["paths"]["user_img"] + peer_jid + ".jpg"):
+                                os.remove(self.config["paths"]["user_img"] + peer_jid + ".jpg")
 
         if noob_status == 1 and user_days <= int(noob_days):
             # remove noob activated
@@ -72,7 +110,7 @@ class UserProcess:
                                                                   join_data["group_jid"])
 
             # Start Silent Timer
-            # Silent(client).silent_timeout(peer_jid, join_data["group_jid"], bot_id)
+            Silent(self).silent_timeout(peer_jid, join_data["group_jid"], self.bot_id)
             print("Start Silent Timer")
 
         else:

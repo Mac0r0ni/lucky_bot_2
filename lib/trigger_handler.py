@@ -15,6 +15,7 @@ import cv2
 
 # Python 3 Project Libraries
 import requests
+from colorama import Fore, Style
 
 from lib.message_processing_handler import process_message
 from lib.redis_handler import RedisCache
@@ -31,6 +32,10 @@ class Triggers:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         s = chat_message.body.lower()
@@ -328,6 +333,7 @@ class Triggers:
             elif result == 5:
                 RemoteAdmin(self).send_message(chat_message, "Maximum responses reached. 40")
             else:
+                print(Fore.RED + str(result) + Style.RESET_ALL)
                 RemoteAdmin(self).send_message(chat_message, "Only admins can add admin triggers.")
         elif sub_status == 2 or sub_status == 3:
             # Mode 2: Admin only Create User/Admin Trigger Mode 3: Admin Only Create/Trigger
@@ -811,6 +817,8 @@ def process_vid_sub(client, message, action, sub_type, sub, response, vid_url, p
                                                   "trigger_media"] + group_jid +
                                                "/" + str(vid_id) + ".mp4"], group_jid, peer_jid)
             RedisCache(client.config).rem_from_media_sub_queue(peer_jid, group_jid)
+
+
 
 
 def media_sub_timeout(client, chat_message, peer_jid, group_jid):

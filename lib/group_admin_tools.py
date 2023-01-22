@@ -2,7 +2,12 @@ import os
 import time
 from threading import Timer, Thread
 
+from colorama import Style, Fore
+
+from lib.bot_utility import convert_time
+from lib.database_handler import Database
 from lib.feature_status_handler import FeatureStatus
+from lib.image_response_handler import media_forward_timeout
 from lib.message_processing_handler import process_message, MessageProcessing
 from lib.redis_handler import RedisCache
 from lib.remote_admin_handler import RemoteAdmin
@@ -17,6 +22,10 @@ class WelcomeMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -36,7 +45,8 @@ class WelcomeMessage:
         elif s[:16] == prefix + "welcome message":
             new_welcome_message = chat_message.body[17:]
             if new_welcome_message[:2] == "$i" or new_welcome_message[:2] == "$g" or new_welcome_message[:2] == "$v":
-                if new_welcome_message[:3] == "$gs" or new_welcome_message[:3] == "$gn" or new_welcome_message[:3] == "$gh":
+                if new_welcome_message[:3] == "$gs" or new_welcome_message[:3] == "$gn" or new_welcome_message[
+                                                                                           :3] == "$gh":
                     FeatureStatus(self).set_feature_message(chat_message, "welcome_message", new_welcome_message)
                     return
                 else:
@@ -49,10 +59,10 @@ class WelcomeMessage:
                         if os.path.exists(check):
                             os.remove(check)
                     RedisCache(self.config).add_to_media_message_queue(new_welcome_message, "add", "welcome_message",
-                                                            chat_message.from_jid,
-                                                            chat_message.group_jid)
+                                                                       chat_message.from_jid,
+                                                                       chat_message.group_jid)
                     MessageProcessing(self).media_message_timeout(chat_message, chat_message.from_jid,
-                                          chat_message.group_jid)
+                                                                  chat_message.group_jid)
             else:
                 FeatureStatus(self).set_feature_message(chat_message, "welcome_message", new_welcome_message)
             return
@@ -65,25 +75,27 @@ class WelcomeMessage:
                 status_string = "Welcome Status: On" + "\n"
                 if welcome_message != "none":
 
-                    if welcome_message[-4:] == "json" or welcome_message[-3:] == "png" or welcome_message[-3:] == "jpg" or welcome_message[-3:] == "mp4":
-                            if welcome_message[-4:] == "json":
-                                media_type = "gif"
-                            elif welcome_message[-3:] == "png" or welcome_message[-3:] == "jpg":
-                                media_type = "Image"
-                            elif welcome_message[-3:] == "mp4":
-                                media_type = "Video"
-                            else:
-                                media_type = "Media"
+                    if welcome_message[-4:] == "json" or welcome_message[-3:] == "png" or welcome_message[
+                                                                                          -3:] == "jpg" or welcome_message[
+                                                                                                           -3:] == "mp4":
+                        if welcome_message[-4:] == "json":
+                            media_type = "gif"
+                        elif welcome_message[-3:] == "png" or welcome_message[-3:] == "jpg":
+                            media_type = "Image"
+                        elif welcome_message[-3:] == "mp4":
+                            media_type = "Video"
+                        else:
+                            media_type = "Media"
 
-                            if "] " in group_messages["welcome_message"]:
-                                try:
-                                    text = group_messages["welcome_message"].split("] ")[0].replace("[", "")
-                                except:
-                                    text = "Unknown"
-                            else:
-                                text = "None"
+                        if "] " in group_messages["welcome_message"]:
+                            try:
+                                text = group_messages["welcome_message"].split("] ")[0].replace("[", "")
+                            except:
+                                text = "Unknown"
+                        else:
+                            text = "None"
 
-                            status_string += "Type: " + media_type + "\n" + "Text: " + str(text) + "\n"
+                        status_string += "Type: " + media_type + "\n" + "Text: " + str(text) + "\n"
 
                     else:
                         status_string += "Welcome Message: " + welcome_message + "\n"
@@ -94,6 +106,7 @@ class WelcomeMessage:
 
             RemoteAdmin(self).send_message(chat_message, status_string)
 
+
 class LeaveMessage:
     def __init__(self, client):
         self.client = client.client
@@ -102,6 +115,10 @@ class LeaveMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -132,10 +149,10 @@ class LeaveMessage:
                         if os.path.exists(check):
                             os.remove(check)
                     RedisCache(self.config).add_to_media_message_queue(welcome_message, "add", "exit_message",
-                                                            chat_message.from_jid,
-                                                            chat_message.group_jid)
+                                                                       chat_message.from_jid,
+                                                                       chat_message.group_jid)
                     MessageProcessing(self).media_message_timeout(chat_message, chat_message.from_jid,
-                                          chat_message.group_jid)
+                                                                  chat_message.group_jid)
             else:
                 FeatureStatus(self).set_feature_message(chat_message, "exit_message", welcome_message)
             return
@@ -176,6 +193,7 @@ class LeaveMessage:
 
             RemoteAdmin(self).send_message(chat_message, status_string)
 
+
 class NameGrab:
     def __init__(self, client):
         self.client = client.client
@@ -184,6 +202,10 @@ class NameGrab:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         s = chat_message.body.lower()
@@ -210,6 +232,7 @@ class NameGrab:
 
             RemoteAdmin(self).send_message(chat_message, status_string)
 
+
 class Lock:
     def __init__(self, client):
         self.client = client.client
@@ -218,6 +241,10 @@ class Lock:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -258,6 +285,10 @@ class Noob:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -277,7 +308,8 @@ class Noob:
                 FeatureStatus(self).set_feature_setting(chat_message, "noob_days", d)
             except Exception as e:
                 print(repr(e))
-                RemoteAdmin(self).send_message(chat_message, "Give only a number after command\n Example: " + prefix + "noob days 10")
+                RemoteAdmin(self).send_message(chat_message,
+                                               "Give only a number after command\n Example: " + prefix + "noob days 10")
         elif s[:13] == prefix + "noob message":
             noob_msg = chat_message.body[14:]
             FeatureStatus(self).set_feature_message(chat_message, "noob_message", noob_msg)
@@ -311,6 +343,10 @@ class Invite:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -357,6 +393,7 @@ class Invite:
         else:
             return
 
+
 class GroupTimer:
     def __init__(self, client):
         self.client = client.client
@@ -365,6 +402,10 @@ class GroupTimer:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -401,11 +442,11 @@ class GroupTimer:
                            args=(chat_message, timer_time)).start()
                 else:
                     RemoteAdmin(self).send_message(chat_message, "Time needs specified "
-                                                          + prefix + "timer 5 s")
+                                                   + prefix + "timer 5 s")
                     return
             except Exception:
                 RemoteAdmin(self).send_message(chat_message, "Give only a number after command: Example:\n" +
-                                                      prefix + "timer 5 s")
+                                               prefix + "timer 5 s")
 
     def start_timer(self, chat_message, seconds):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -468,6 +509,7 @@ class GroupTimer:
         if message.from_jid.encode("utf-8") in timers:
             RedisCache(self.config).update_timer_cache(message.from_jid, message.group_jid)
 
+
 class Verification:
     def __init__(self, client):
         self.client = client.client
@@ -476,6 +518,10 @@ class Verification:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def main(self, chat_message, prefix):
         group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
@@ -495,7 +541,8 @@ class Verification:
                 ti = float(s.split(prefix + "verify time ")[1]) * 60
                 FeatureStatus(self).set_feature_setting(chat_message, "verification_time", ti)
             except Exception:
-                RemoteAdmin(self).send_message(chat_message, "Give only a number after command\n Example: " + prefix + "verification time 5")
+                RemoteAdmin(self).send_message(chat_message,
+                                               "Give only a number after command\n Example: " + prefix + "verification time 5")
 
         elif prefix + "verify days " in s:
             try:
@@ -503,7 +550,8 @@ class Verification:
                 FeatureStatus(self).set_feature_setting(chat_message, "verification_days", d)
             except Exception as e:
                 print(e)
-                RemoteAdmin(self).send_message(chat_message, "Give only a number after command\n Example: " + prefix + "verify days 10")
+                RemoteAdmin(self).send_message(chat_message,
+                                               "Give only a number after command\n Example: " + prefix + "verify days 10")
 
         elif s == prefix + "verify invite" in s:
             if group_settings["invite-verification_status"] == 1:
@@ -641,3 +689,885 @@ class Verification:
                                                          peer_jid, peer_info['group_jid'],
                                                          self.bot_id, "0")
                         self.client.send_chat_message(group_jid, vwrong_message)
+
+
+class Silent:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "silent":  # admin
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["silent-join_status"] == 1:
+                status = 0
+            else:
+                status = 1
+            FeatureStatus(self).set_feature_status(chat_message, status, "silent-join_status")
+
+        elif s[:15] == prefix + "silent message":
+            silent_msg = chat_message.body[16:]
+            FeatureStatus(self).set_feature_message(chat_message, "silent-join_message", silent_msg)
+
+        elif prefix + "silent time " in s:
+            try:
+                ti = float(s.split(prefix + "silent time ")[1]) * 60
+                FeatureStatus(self).set_feature_setting(chat_message, "silent-join_time", ti)
+            except Exception:
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'Use a number after command. Example: {prefix}silent time 5')
+
+        elif s == prefix + "silent status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            group_messages = group_data["group_messages"]
+            silent_status = group_settings["silent-join_status"]
+            silent_message = group_messages["silent-join_message"]
+            silent_time = group_settings["silent-join_time"]
+            if silent_time >= 60:
+                s_time = silent_time / 60
+                units = "min."
+            else:
+                s_time = silent_time
+                units = "sec."
+            if silent_status == 1:
+                status_string = "Silent Joiner Status: On \n"
+                status_string += "Silent Joiner Time: " + str(round(s_time)) + " " + units + "\n"
+                if silent_message != "none":
+                    status_string += "Silent Joiner Message: " + silent_message + "\n"
+                else:
+                    status_string += "Silent Joiner message: None\n"
+
+            else:
+                status_string = "Silent Joiner Status: Off\n"
+            RemoteAdmin(self).send_message(chat_message, status_string)
+        else:
+            return
+
+    def silent_timeout(self, peer_jid, group_jid, bot_id):
+        group_data = RedisCache(self.config).get_all_group_data(group_jid)
+        group_settings = group_data["group_settings"]
+        group_messages = group_data["group_messages"]
+        time.sleep(group_settings["silent-join_time"])
+        user_info = RedisCache(self.config).get_single_join_queue(peer_jid, bot_id)
+        if user_info is not None and int(user_info["timeout"]) == 0:
+            timeout_msg = group_messages["silent-join_message"]
+            self.client.send_chat_message(group_jid, timeout_msg)
+            self.client.remove_peer_from_group(group_jid, peer_jid)
+            User(self).group_user_remove(peer_jid, group_jid)
+        else:
+            RedisCache(self).remove_from_join_queue(peer_jid, bot_id)
+
+
+class Profile:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "pfp":  # admin
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["profile_status"] == 1:
+                status = 0
+            else:
+                status = 1
+            FeatureStatus(self).set_feature_status(chat_message, status, "profile_status")
+
+        elif s[:12] == prefix + "pfp message":
+            pfp_msg = chat_message.body[13:]
+            FeatureStatus(self).set_feature_message(chat_message, "profile_message", pfp_msg)
+
+        elif s == prefix + "pfp status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            group_messages = group_data["group_messages"]
+            profile_status = group_settings["profile_status"]
+            profile_message = group_messages["profile_message"]
+            if profile_status == 1:
+                status_string = "Default pfp Status: On\n"
+                if profile_message != "none":
+                    status_string += "Default pfp Message: " + profile_message + "\n"
+                else:
+                    status_string += "Default pfp message: None\n"
+            else:
+                status_string = "Default pfp Status: Off\n"
+
+            RemoteAdmin(self).send_message(chat_message, status_string)
+        else:
+            return
+
+
+class BotHelpers:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "helper":  # admin
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["bot-helper_status"] == 1:
+                status = 0
+            else:
+                status = 1
+
+            FeatureStatus(self).set_feature_status(chat_message, status, "bot-helper_status")
+
+        elif s == prefix + "helper status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings:
+                if group_settings["bot-helper_status"] == 1:
+                    status_message = "Bot Helper Status: On"
+                else:
+                    status_message = "Bot Helper Status: Off"
+                RemoteAdmin(self).send_message(chat_message, status_message)
+
+
+class BotSFW:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "sfw":  # admin
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["sfw_status"] == 1:
+                status = 0
+            else:
+                status = 1
+
+            FeatureStatus(self).set_feature_status(chat_message, status, "sfw_status")
+
+        elif s == prefix + "sfw status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings:
+                if group_settings["sfw_status"] == 1:
+                    status_message = "Safe For Work Mode: On"
+                else:
+                    status_message = "Safe For Work Mode: Off"
+                RemoteAdmin(self).send_message(chat_message, status_message)
+
+
+class Forward:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "bypass":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["media-forward_status"] == 1:
+                status = 0
+            else:
+                status = 1
+            FeatureStatus(self).set_feature_status(chat_message, status, "media-forward_status")
+        elif s == prefix + "forward":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            group_members = group_data["group_members"]
+            if not group_settings:
+                return
+            if group_settings["media-forward_status"] == 1:
+
+                if group_members:
+                    if chat_message.from_jid in group_members:
+                        if "jid" in group_members[chat_message.from_jid]:
+                            if group_members[chat_message.from_jid]["jid"] != "Unknown":
+
+                                RedisCache(self.config).add_to_media_forward_queue(
+                                    group_members[chat_message.from_jid]["jid"],
+                                    chat_message.group_jid, self.bot_id)
+                                Thread(target=media_forward_timeout,
+                                       args=(self.config, self.client, group_members[chat_message.from_jid]["jid"],
+                                             chat_message.group_jid, self.bot_id)).start()
+                            else:
+                                RemoteAdmin(self).send_message(chat_message,
+                                                               "PM is unavailable, please open a PM with me and rejoin group.")
+            else:
+                RemoteAdmin(self).send_message(chat_message, "Media Forward Disabled")
+
+        elif s == prefix + "bypass status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            grab_status = group_settings["media-forward_status"]
+
+            if grab_status == 1:
+                status_string = "Media Forward Status: On\n"
+            else:
+                status_string = "Media Forward Status: Off\n"
+
+            RemoteAdmin(self).send_message(chat_message, status_string)
+
+
+class Censor:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        group_settings = group_data["group_settings"]
+        s = chat_message.body.lower()
+        if prefix + "censor time" in s:
+            try:
+                ti = float(s.split(prefix + "censor time ")[1]) * 60
+                FeatureStatus(self).set_feature_setting(chat_message, "censor_time", ti)
+            except Exception:
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'give only a number after command\n Example: {prefix}censor time 5')
+
+        elif s == prefix + "censor list":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+            group_admins = group_data["group_admins"]
+            all_admins = {**bot_admins, **group_admins}
+            if chat_message.from_jid in all_admins:
+                group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+                censor_words = group_data["censor_words"]
+                if censor_words:
+                    censor_list = "Censored Words: \n"
+                    length = len(censor_words)
+                    count = 0
+                    for w in censor_words:
+                        count += 1
+                        if length == 1:
+                            censor_list += str(" " + w)
+                        elif count == length:
+                            censor_list += str(" " + w)
+                        else:
+                            censor_list += str(" " + w + " /")
+                    RemoteAdmin(self).send_message(chat_message, censor_list)
+                else:
+                    censor_list = "Censored Words: "
+                    RemoteAdmin(self).send_message(chat_message, censor_list)
+            else:
+                RemoteAdmin(self).send_message(chat_message, "Must be an admin to use " + s)
+
+        elif s[:12] == prefix + "censor warn":
+            verification_msg = chat_message.body[13:]
+            FeatureStatus(self).set_feature_message(chat_message, "censor-warn_message", verification_msg)
+
+        elif s[:12] == prefix + "censor kick":
+            verification_phrase = chat_message.body[13:].lower()
+            FeatureStatus(self).set_feature_message(chat_message, "censor-kick_message", verification_phrase)
+
+        elif s == prefix + "censor":
+            if group_settings["censor_status"] >= 1:
+                status = 0
+            else:
+                status = 1
+
+            FeatureStatus(self).set_feature_status(chat_message, status, "censor_status")
+
+        elif prefix + "cmode " in s:
+            try:
+                mode = int(chat_message.body.split(prefix + "cmode ")[1])
+            except Exception as e:
+                self.client.send_chat_message(chat_message.group_jid, "Shut up Smithers: " + str(e))
+                return
+
+            FeatureStatus(self).set_censor_status(chat_message, mode, "censor_status")
+
+        elif s == prefix + "censor status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            group_messages = group_data["group_messages"]
+
+            censor_status = group_settings["censor_status"]
+            censor_time = group_settings["censor_time"]
+            censor_warn = group_messages["censor-warn_message"]
+            censor_kick = group_messages["censor-kick_message"]
+
+            c_time, c_units = convert_time(censor_time)
+            if censor_status == 1:  # Mode 1 Matches entire message
+                status_message = "Censor Status: Message Mode\n"
+                status_message += "Warn Time: " + str(c_time) + " " + str(c_units)
+                status_message += "Warn Message: " + censor_warn + "\n"
+                status_message += "Kick Message: " + censor_kick + "\n"
+
+            elif censor_status == 2:  # Mode 2 Searches message for word match.
+                status_message = "Censor Status: Search Mode\n"
+                status_message += "Warn Time: " + str(c_time) + " " + str(c_units)
+                status_message += "Warn Message: " + censor_warn + "\n"
+                status_message += "Kick Message: " + censor_kick + "\n"
+            else:
+                status_message = "Censor Status: Off"
+
+            RemoteAdmin(self).send_message(chat_message, status_message)
+
+        elif s == prefix + "censor":
+            if group_settings["censor_status"] >= 1:
+                status = 0
+            else:
+                status = 1
+
+            FeatureStatus(self).set_feature_status(chat_message, status, "censor_status")
+
+        elif prefix + "censor " in s:
+            word = s[8:]
+            Censor(self).add_censor_word(word, chat_message)
+        elif "-censor " in s:
+            word = s[8:]
+            Censor(self).remove_censor_word(word, chat_message)
+
+        else:
+            return
+
+    def add_censor_word(self, word, chat_message):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        group_admins = group_data["group_admins"]
+        all_admins = {**bot_admins, **group_admins}
+        if chat_message.from_jid in all_admins:
+            current_words = RedisCache(self.config).get_single_group_data("json", "censor_words",
+                                                                          chat_message.group_jid)
+            if current_words:
+                if word not in current_words:
+                    length = len(current_words)
+                    current_words[word] = length + 1
+                    Database(self.config).update_group_data("json", "censor_words", current_words,
+                                                            chat_message.group_jid)
+                    RemoteAdmin(self).send_message(chat_message, f'Added {word} to censor list.')
+            else:
+                current_words = {}
+                current_words[word] = 1
+                Database(self.config).update_group_data("list", "censor_words", current_words, chat_message.group_jid)
+                RemoteAdmin(self).send_message(chat_message, f'Added {word} to censor list.')
+
+        else:
+            RemoteAdmin(self).send_message(chat_message, f'Only admins can use {chat_message.body[7:]}')
+
+    def remove_censor_word(self, word, chat_message):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        group_admins = group_data["group_admins"]
+        all_admins = {**bot_admins, **group_admins}
+        if chat_message.from_jid in all_admins:
+            current_words = RedisCache(self.config).get_single_group_data("json", "censor_words",
+                                                                          chat_message.group_jid)
+            if current_words:
+                if word in current_words:
+                    del current_words[word]
+                    Database(self.config).update_group_data("json", "censor_words", current_words,
+                                                            chat_message.group_jid)
+                    RemoteAdmin(self).send_message(chat_message, f'Removed {word} to censor list.')
+        else:
+            RemoteAdmin(self).send_message(chat_message, f'Only admins can use {chat_message.body[7:]}')
+
+
+class Purge:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        if s[:14] == prefix + "purge message":  # admin
+            purge_msg = chat_message.body[15:]
+            FeatureStatus(self).set_feature_message(chat_message, "purge_message", purge_msg)
+
+        elif prefix + "purge status" in s:  # admin
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_messages = group_data["group_messages"]
+            if group_messages:
+                if group_messages["purge_message"] != 'none':
+                    status_response = 'Purge Message: \n'
+                    final = process_message(self.config, "group", group_messages["purge_message"],
+                                            chat_message.from_jid,
+                                            chat_message.group_jid, self.bot_id, "245")
+                    status_response += final
+                else:
+                    status_response = 'Purge Message: Off'
+
+                RemoteAdmin(self).send_message(chat_message, status_response)
+
+        elif prefix + "purge " in s:
+            cooldown = RedisCache(self.config).get_from_group_cooldown("purge", chat_message.group_jid)
+            now = time.time()
+            a = float(now) - float(cooldown)
+            if a > 300 or cooldown == 0:
+                count = int(s.split(prefix + "purge ")[1])
+                group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+                bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+                group_admins = group_data["group_admins"]
+                all_admins = {**bot_admins, **group_admins}
+                if count <= 5:
+                    if chat_message.from_jid in all_admins:
+                        Purge(self).purge_inactive(chat_message, count)
+                    else:
+                        RemoteAdmin(self).send_message(chat_message, f'Only admins can use {prefix}purge {count}.')
+                elif count > 5 and chat_message.from_jid in bot_admins:
+                    Purge(self).purge_inactive(chat_message, count)
+                else:
+                    RemoteAdmin(self).send_message(chat_message, f'You can only purge 5 or less members at a time.')
+            else:
+                t_left, t_units = convert_time(300 - a)
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'You must wait {str(round(t_left))} {t_units} to purge again.')
+
+        else:
+            RemoteAdmin(self).send_message(chat_message, "Invalid Option for Purge")
+
+    def purge_inactive(self, chat_message, count):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        group_admins = group_data["group_admins"]
+        members = group_data["group_members"]
+        group_messages = group_data["group_messages"]
+        talkers = RedisCache(self.config).get_all_talker_lurkers("talkers", chat_message.group_jid)
+        exempt = []
+        old_users = []
+        for l in talkers:
+            if l in group_admins:
+                exempt.append(l)
+            if l not in members:
+                old_users.append(l)
+            elif l in members:
+                if members[l]["cap_whitelist"] == 1:
+                    exempt.append(l)
+
+        for u in exempt:
+            if u in talkers:
+                del talkers[u]
+
+        for u in old_users:
+            if u in talkers:
+                del talkers[u]
+
+        sort_talkers = {k: v for k, v in sorted(talkers.items(), key=lambda item: item[1], reverse=True)}
+        length = len(sort_talkers) - count
+        if length < 0:
+            RemoteAdmin(self).send_message(chat_message, f'I can\'t do that! There aren\'t enough members to purge!')
+        else:
+            if group_messages:
+                if group_messages["purge_message"] != 'none':
+                    final = process_message(self.config, "group", group_messages["purge_message"],
+                                            chat_message.from_jid,
+                                            chat_message.group_jid, self.bot_id, "245")
+                    RemoteAdmin(self).send_message(chat_message, final)
+            while count > 0:
+                oldest = len(sort_talkers) - count
+                oldest_jid = list(sort_talkers)[oldest]
+                # RemoteAdmin(self.client).send_message(chat_message,
+                #                                      "Would have removed " + members[oldest_jid]["display_name"])
+                # print(Fore.RED + "Removing User From Group, Cache and Database" + Style.RESET_ALL)
+                User(self).group_user_remove(oldest_jid, chat_message.group_jid)
+                self.client.remove_peer_from_group(chat_message.group_jid, oldest_jid)
+                count -= 1
+                time.sleep(1)
+
+            RedisCache(self.config).add_to_group_cooldown("purge", chat_message.group_jid)
+
+
+class Whitelist:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        if s[:11] == prefix + "whitelist ":
+            Whitelist(self).add_to_whitelist(chat_message, prefix)
+
+        elif s[:11] == "-whitelist ":
+            Whitelist(self).remove_from_whitelist(chat_message)
+
+        elif s[:10] == prefix + "whitelist":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            members = group_data["group_members"]
+            whitelist_message_1 = str("++++++ User Whitelist ++++++\n")
+            whitelist_message_1 += str("ID        Member\n")
+            whitelist_message_1 += str("++++++++++++++++++++++++\n")
+            whitelist_message_2 = str("+++++ User Whitelist 2 +++++\n")
+            whitelist_message_2 += str("++++++++++++++++++++++++\n")
+            whitelist_message_2 += str("ID        Member\n")
+            count = 0
+            for m in members:
+                if members[m]["cap_whitelist"] == 1:
+                    count += 1
+                    if len(str(members[m]["uid"])) > 1:
+                        uid = str(members[m]["uid"]) + "       "
+                    elif len(str(members[m]["uid"])) == 2:
+                        uid = str(members[m]["uid"]) + "      "
+                    else:
+                        uid = str(members[m]["uid"]) + "     "
+                    if count <= 50:
+                        whitelist_message_1 += uid + members[m]["display_name"][:10] + "\n"
+                    else:
+                        whitelist_message_2 += uid + members[m]["display_name"][:10] + "\n"
+
+            if count <= 50:
+                RemoteAdmin(self).send_message(chat_message, whitelist_message_1)
+            elif count > 50:
+                RemoteAdmin(self).send_message(chat_message, whitelist_message_1)
+                RemoteAdmin(self).send_message(chat_message, whitelist_message_2)
+
+    def add_to_whitelist(self, chat_message, prefix):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        group_admins = group_data["group_admins"]
+        members = group_data["group_members"]
+        all_admins = {**bot_admins, **group_admins}
+
+        if chat_message.from_jid in all_admins:
+            s = chat_message.body.lower()
+            try:
+                user_uid = int(s[11:])
+            except TypeError:
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'give only a number after command\n Example: {prefix}whitelist 23')
+                return
+            selected_member = False
+            for m in members:
+                if members[m]["uid"] == user_uid:
+                    selected_member = m
+                    members[m]["cap_whitelist"] = 1
+
+            if selected_member:
+                Database(self.config).update_group_data("json", "group_members", members, chat_message.group_jid)
+                status_message = f'Added {members[selected_member]["display_name"]} to whitelist.'
+            else:
+                status_message = f'Can\'t find user with id {user_uid}.'
+
+            RemoteAdmin(self).send_message(chat_message, status_message)
+
+        else:
+            status_message = f'Only admins can use {prefix}whitelist.'
+            RemoteAdmin(self).send_message(chat_message, status_message)
+
+    def remove_from_whitelist(self, chat_message):
+        s = chat_message.body.lower()
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        group_admins = group_data["group_admins"]
+        members = group_data["group_members"]
+        all_admins = {**bot_admins, **group_admins}
+        if chat_message.from_jid in all_admins:
+            try:
+                user_uid = int(s[11:])
+            except TypeError:
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'give only a number after command\n Example: -whitelist 23')
+                return
+            selected_member = False
+            for m in members:
+                if members[m]["uid"] == user_uid:
+                    selected_member = m
+                    members[m]["cap_whitelist"] = 0
+
+            if selected_member:
+                Database(self.config).update_group_data("json", "group_members", members, chat_message.group_jid)
+                status_message = f'Removed {members[selected_member]["display_name"]} from whitelist.'
+            else:
+                status_message = f'Can\'t find user with id {user_uid}.'
+            RemoteAdmin(self).send_message(chat_message, status_message)
+        else:
+            status_message = f'Only admins can use -whitelist.'
+            RemoteAdmin(self).send_message(chat_message, status_message)
+
+
+class UserCap:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+
+        if s == prefix + "cap":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_settings = group_data["group_settings"]
+            if group_settings["cap_status"] == 1:
+                status = 0
+            else:
+                status = 1
+            FeatureStatus(self).set_feature_status(chat_message, status, "cap_status")
+
+        elif prefix + "cap users " in s:
+            try:
+                u = int(s[11:])
+                FeatureStatus(self).set_feature_setting(chat_message, "cap_users", u)
+            except Exception as e:
+                RemoteAdmin(self).send_message(chat_message,
+                                               f'give only a number after command\n Example: {prefix}cap users 97')
+
+        elif s[:12] == prefix + "cap message":
+            cap_msg = chat_message.body[13:]
+            FeatureStatus(self).set_feature_message(chat_message, "cap_message", cap_msg)
+
+        elif s == prefix + "cap status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_messages = group_data["group_messages"]
+            group_settings = group_data["group_settings"]
+            cap_status = group_settings["cap_status"]
+            cap_message = group_messages["cap_message"]
+            cap_users = group_settings["cap_users"]
+
+            if cap_status == 1:
+                status_string = "Group User Cap Status: On\n"
+                status_string += "Max Users: " + str(cap_users) + "\n"
+                if cap_message != "none":
+                    status_string += "Group User Cap Message: " + cap_message + "\n"
+                else:
+                    status_string += "Group User Cap message: None \n"
+            else:
+                status_string = "Group User Cap Status: Off\n"
+
+            RemoteAdmin(self).send_message(chat_message, status_string)
+
+    def remove_last_active(self, chat_message):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        group_admins = group_data["group_admins"]
+        group_members = group_data["group_members"]
+        group_messages = group_data["group_messages"]
+        group_settings = group_data["group_settings"]
+
+        if len(chat_message.group.members) + 1 <= group_settings["cap_users"]:
+            return
+        else:
+            talkers = RedisCache(self.config).get_all_talker_lurkers("talkers", chat_message.group_jid)
+            exempt = []
+            old_users = []
+            for l in talkers:
+                if l in group_admins:
+                    exempt.append(l)
+                if l not in group_members:
+                    old_users.append(l)
+                elif l in group_members:
+                    if group_members[l]["cap_whitelist"] == 1:
+                        exempt.append(l)
+
+            for u in exempt:
+                if u in talkers:
+                    del talkers[u]
+
+            for u in old_users:
+                if u in talkers:
+                    del talkers[u]
+
+            if chat_message.status_jid in talkers:
+                del talkers[chat_message.status_jid]
+
+            sort_talkers = {k: v for k, v in sorted(talkers.items(), key=lambda item: item[1], reverse=True)}
+            length = len(sort_talkers)
+
+            if length < 1:
+                return
+            else:
+                oldest_jid = list(sort_talkers)[length - 1]
+                if group_messages["cap_message"].lower() != "none":
+                    cap_message = process_message(self.config, "group", group_messages["cap_message"],
+                                                  oldest_jid, chat_message.group_jid, self.bot_id, "0")
+                    self.client.send_chat_message(chat_message.group_jid, cap_message)
+                # RemoteAdmin(self.client).send_message(chat_message,
+                #                                      "Would have removed " + members[oldest_jid]["display_name"])
+                # print(Fore.RED + "Removing User From Group, Cache and Database" + Style.RESET_ALL)
+                User(self).group_user_remove(oldest_jid, chat_message.group_jid)
+                self.client.remove_peer_from_group(chat_message.group_jid, oldest_jid)
+
+
+class BackupRestore:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        if s == prefix + "backup":
+            BackupRestore(self).backup(chat_message)
+        elif s == prefix + "restore":
+            BackupRestore(self).restore(chat_message)
+        else:
+            RemoteAdmin(self).send_message(chat_message, "Invalid Backup/Restore Option")
+
+    def backup(self, chat_message):
+        result = Database(self.config).backup_group_database(chat_message.from_jid, chat_message.group_jid, self.bot_id)
+        if result == 1:
+            RemoteAdmin(self).send_message(chat_message, "Backup Complete.")
+        else:
+            RemoteAdmin(self).send_message(chat_message, f'Only admins can use {chat_message.body}.')
+
+    def restore(self, chat_message):
+        result = Database(self.config).restore_group_database(chat_message.from_jid, chat_message.group_jid,
+                                                              self.bot_id)
+        if result == 1:
+            RemoteAdmin(self).send_message(chat_message, "Restore Complete")
+        else:
+            RemoteAdmin(self).send_message(chat_message, f'Only admins can use {chat_message.body}.')
+
+
+class DataTransfer:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, message, prefix, message_source):
+        s = message.body.lower()
+        if s[:10] == prefix + "transfer ":
+            hashes = s.split(prefix + "transfer ")[1]
+            source_hash = hashes.split(" ")[0]
+            destination_hash = hashes.split(" ")[1]
+            result, destination_gjid = Database(self.config).transfer_group_database(source_hash, destination_hash,
+                                                                          message.from_jid, message_source, self.bot_id)
+            if result == 1:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message,
+                                                  f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid, f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
+                self.client.send_chat_message(destination_gjid, "Remote Data Transfer Complete.")
+            elif result == 2:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nMust be admin in source group. {source_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nMust be admin in source group. {source_hash}')
+            elif result == 3:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nMust be admin in destination group. {destination_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nMust be admin in destination group. {destination_hash}')
+            elif result == 4:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nTransfer Data Corrupt')
+                else:
+                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nTransfer Data Corrupt')
+            elif result == 5:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
+            elif result == 6:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
+            elif result == 7:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
+            elif result == 8:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nCan not get your user info from destination group. {destination_hash}')
+                else:
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nCan not get your user info from destination group. {destination_hash}')
+            else:
+                if message_source == "gm":
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nUnknown Error.')
+                else:
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nUnknown Error.')
+        else:
+            if message_source == "gm":
+                RemoteAdmin(self).send_message(message, 'Invalid Transfer Option')
+            else:
+                self.client.send_chat_message(message.from_jid, 'Invalid Transfer Option')
+

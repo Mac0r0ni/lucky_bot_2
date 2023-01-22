@@ -13,6 +13,10 @@ class StickerResponse:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def parse_sticker_response(self, response):
         # Sticker Response
@@ -39,3 +43,7 @@ class StickerResponse:
                                                                   response.group_jid)
                     RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"],
                                                                   response.group_jid)
+                    RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), response.from_jid,
+                                                                     response.group_jid)
+                    RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
+                                                                     response.group_jid)

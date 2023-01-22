@@ -16,6 +16,10 @@ class PeerInfo:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def peer_info_parser(self, response):
         grab_queue = RedisCache(self.config).get_all_grab_queue(self.bot_id)
@@ -26,9 +30,9 @@ class PeerInfo:
             res_dict = {}
             for i in response.users:
                 if i.pic is not None:
-                    res_dict[i.jid] = {"display_name": i.display_name.replace("\'", "").replace("\\", "").replace("\"",""), "pfp": i.pic + "/orig.jpg"}
+                    res_dict[i.jid] = {"display_name": i.display_name, "pfp": i.pic + "/orig.jpg"}
                 else:
-                    res_dict[i.jid] = {"display_name": i.display_name.replace("\'", "").replace("\\", "").replace("\"",""),
+                    res_dict[i.jid] = {"display_name": i.display_name,
                                        "pfp": "default.jpg"}
 
             group_queue = RedisCache(self.config).get_group_queue(self.bot_id)
@@ -77,10 +81,10 @@ class PeerInfo:
         elif len(response.users) == 1 and response.users[0]:
             # Single users peer data
             if response.users[0].pic is not None:
-                response_data = {"username": response.users[0].username, "display_name": response.users[0].display_name.replace("\'", "").replace("\\", "").replace("\"",""),
+                response_data = {"username": response.users[0].username, "display_name": response.users[0].display_name,
                                  "jid": response.users[0].jid, "pfp": response.users[0].pic + "/orig.jpg"}
             else:
-                response_data = {"username": response.users[0].username, "display_name": response.users[0].display_name.replace("\'", "").replace("\\", "").replace("\"",""),
+                response_data = {"username": response.users[0].username, "display_name": response.users[0].display_name,
                                  "jid": response.users[0].jid,
                                  "pfp": "default.jpg"}
 
@@ -140,11 +144,11 @@ def process_peer_data(res_dict, group_data):
 
     for m in res_dict:
         if m in group_data["owner"]:
-            owner_dict.update({m: res_dict[m]["display_name"].replace("\'", "").replace("\\", "").replace("\"","")})
+            owner_dict.update({m: res_dict[m]["display_name"]})
         if m in group_data["admins"]:
-            admins_dict.update({m: res_dict[m]["display_name"].replace("\'", "").replace("\\", "").replace("\"","")})
+            admins_dict.update({m: res_dict[m]["display_name"]})
         if m in group_data["members"]:
-            members_dict.update({m: {"display_name": res_dict[m]["display_name"].replace("\'", "").replace("\\", "").replace("\"",""), "pfp": res_dict[m]["pfp"]}})
+            members_dict.update({m: {"display_name": res_dict[m]["display_name"], "pfp": res_dict[m]["pfp"]}})
     return owner_dict, admins_dict, members_dict
 
 

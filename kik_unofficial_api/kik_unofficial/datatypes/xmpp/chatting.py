@@ -3,7 +3,6 @@ Defines classes for dealing with generic chatting (text messaging, read receipts
 """
 import random
 import time
-import os
 import requests
 import json
 import base64
@@ -475,8 +474,14 @@ class IncomingStatusResponse(XMPPResponse):
 class IncomingImageMessage(XMPPResponse):
     def __init__(self, data: BeautifulSoup):
         super().__init__(data)
-        self.request_delivered_receipt = data.request['d'] == 'true'
-        self.requets_read_receipt = data.request['r'] == 'true'
+        if data.request is not None:
+            self.request_delivered_receipt = data.request['d'] == 'true'
+        else:
+            self.request_delivered_receipt = 'true'
+        if data.request is not None:
+            self.requets_read_receipt = data.request['r'] == 'true'
+        else:
+            self.requets_read_receipt = 'true'
         self.app_id = data.find('content').attrs["app-id"]
         self.app_name = data.find('app-name').get_text()
         self.spoof = False
@@ -529,12 +534,18 @@ class IncomingGifMessage(XMPPResponse):
             self.request_delivered_receipt = data.request['d'] == 'true'
         else:
             self.request_delivered_receipt = 'true'
-        self.requets_read_receipt = data.request['r'] == 'true'
+        if data.request is not None:
+            self.requets_read_receipt = data.request['r'] == 'true'
+        else:
+            self.requets_read_receipt = 'true'
         self.status = data.status.text if data.status else None
         self.from_jid = data['from']
         self.to_jid = data['to']
         self.group_jid = data.g['jid'] if data.g else None
-        self.uris = [self.Uri(uri) for uri in data.content.uris]
+        if data.content.uris is not None:
+            self.uris = [self.Uri(uri) for uri in data.content.uris]
+        else:
+            print("Missing URI")
 
     class Uri:
         def __init__(self, uri):
@@ -642,38 +653,35 @@ class OutgoingGIFMessageSub(XMPPElement):
         timestamp = str(int(round(time.time() * 1000)))
         message_type = "chat" if not self.is_group else "groupchat"
         data = (
-            '<message cts="{0}" type="{1}" to="{12}" id="{2}" xmlns="jabber:client">'
-            '<kik push="true" timestamp="{3}" qos="true"/>'
-            '<pb/>'
-            '<content id="{4}" v="2" app-id="com.kik.ext.gif">'
-            '<strings>'
-            '<app-name>GIF</app-name>'
-            '<layout>video</layout>'
-            '<allow-forward>true</allow-forward>'
-            '<disallow-save>true</disallow-save>'
-            '<video-should-autoplay>true</video-should-autoplay>'
-            '<video-should-loop>true</video-should-loop>'
-            '<video-should-be-muted>true</video-should-be-muted>'
-            '</strings>'
-            '<images>'
-            '<icon></icon>'
-            '<preview>{5}</preview>'
-            '</images>'
-            '<uris>'
-            '<uri priority="0" type="video" file-content-type="video/mp4">{6}</uri>'
-            '<uri priority="1" type="video" file-content-type="video/webm">{7}</uri>'
-            '<uri priority="0" type="video" file-content-type="video/tinymp4">{8}</uri>'
-            '<uri priority="1" type="video" file-content-type="video/tinywebm">{9}</uri>'
-            '<uri priority="0" type="video" file-content-type="video/nanomp4">{10}</uri>'
-            '<uri priority="1" type="video" file-content-type="video/nanowebm">{11}</uri>'
-            '</uris>'
-            '</content>'
-            '<request r="true" d="true" xmlns="kik:message:receipt"/>'
-            '</message>'
-        ).format(timestamp, message_type, self.message_id, timestamp, self.message_id, self.gif_preview,
-                 self.gif_data["mp4"], self.gif_data["webm"], self.gif_data["tinymp4"],
-                 self.gif_data["tinywebm"], self.gif_data["nanomp4"],
-                 self.gif_data["nanowebm"], self.peer_jid)
+            f'<message cts="{timestamp}" type="{message_type}" to="{self.peer_jid}" id="{self.message_id}" xmlns="jabber:client">'
+            f'<kik push="true" timestamp="{timestamp}" qos="true"/>'
+            f'<pb/>'
+            f'<content id="{self.message_id}" v="2" app-id="com.kik.ext.gif">'
+            f'<strings>'
+            f'<app-name>GIF</app-name>'
+            f'<layout>video</layout>'
+            f'<allow-forward>true</allow-forward>'
+            f'<disallow-save>true</disallow-save>'
+            f'<video-should-autoplay>true</video-should-autoplay>'
+            f'<video-should-loop>true</video-should-loop>'
+            f'<video-should-be-muted>true</video-should-be-muted>'
+            f'</strings>'
+            f'<images>'
+            f'<icon></icon>'
+            f'<preview>{self.gif_preview}</preview>'
+            f'</images>'
+            f'<uris>'
+            f'<uri priority="0" type="video" file-content-type="video/mp4">{self.gif_data["mp4"]}</uri>'
+            f'<uri priority="1" type="video" file-content-type="video/webm">{self.gif_data["webm"]}</uri>'
+            f'<uri priority="0" type="video" file-content-type="video/tinymp4">{self.gif_data["tinymp4"]}</uri>'
+            f'<uri priority="1" type="video" file-content-type="video/tinywebm">{self.gif_data["tinywebm"]}</uri>'
+            f'<uri priority="0" type="video" file-content-type="video/nanomp4">{self.gif_data["nanomp4"]}</uri>'
+            f'<uri priority="1" type="video" file-content-type="video/nanowebm">{self.gif_data["nanowebm"]}</uri>'
+            f'</uris>'
+            f'</content>'
+            f'<request r="true" d="true" xmlns="kik:message:receipt"/>'
+            f'</message>'
+        )
         packets = [data[s:s + 16384].encode() for s in range(0, len(data), 16384)]
         return list(packets)
 
@@ -749,8 +757,14 @@ class OutgoingCustomGIFMessage(XMPPElement):
 class IncomingVideoMessage(XMPPResponse):
     def __init__(self, data: BeautifulSoup):
         super().__init__(data)
-        self.request_delivered_receipt = data.request['d'] == 'true'
-        self.requets_read_receipt = data.request['r'] == 'true'
+        if data.request is not None:
+            self.request_delivered_receipt = data.request['d'] == 'true'
+        else:
+            self.request_delivered_receipt = 'true'
+        if data.request is not None:
+            self.requets_read_receipt = data.request['r'] == 'true'
+        else:
+            self.requets_read_receipt = 'true'
         self.app_id = data.find('content').attrs["app-id"]
         self.app_name = data.find('app-name').get_text()
         self.spoof = False
@@ -772,7 +786,10 @@ class IncomingCardMessage(XMPPResponse):
             self.request_delivered_receipt = data.request['d'] == 'true'
         else:
             self.request_delivered_receipt = 'true'
-        self.request_read_receipt = data.request['r'] == 'true'
+        if data.request is not None:
+            self.requets_read_receipt = data.request['r'] == 'true'
+        else:
+            self.requets_read_receipt = 'true'
         self.from_jid = data['from']
         self.to_jid = data['to']
         self.group_jid = data.g['jid'] if data.g else None

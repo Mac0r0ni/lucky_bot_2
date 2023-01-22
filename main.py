@@ -11,7 +11,7 @@ from threading import Thread
 from random import uniform
 
 # Python 3 Third Party Libraries
-from colorama import Fore, Style, init
+from colorama import Fore, Style, init, Back
 import kik_unofficial.datatypes.xmpp.chatting as chatting
 from kik_unofficial.client import KikClient
 from kik_unofficial.callbacks import KikClientCallback
@@ -26,6 +26,7 @@ from kik_unofficial.datatypes.xmpp.group_adminship import *
 import lib.bot_config_handler as bot_config
 from lib.card_response_handler import CardResponse
 from lib.database_handler import Database
+from lib.email_handler import send_email
 from lib.gif_response_handler import GifResponse
 from lib.group_message_handler import GroupMessage
 from lib.group_status_handler import GroupStatus
@@ -52,7 +53,14 @@ def main():
 class LuckyBot(KikClientCallback):
     def __init__(self):
         bot_configuration = bot_config.get_bot(sys.argv[1])
-        print(bot_configuration[0].password)
+        self.bot_username = bot_configuration[0].username
+        self.bot_display_name = ""
+        self.bot_id = bot_configuration[0].bot_id
+        self.config = config_data
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
         self.client = KikClient(self,
                                 kik_username=bot_configuration[0].username,
                                 kik_password=bot_configuration[0].password,
@@ -66,30 +74,23 @@ class LuckyBot(KikClientCallback):
                                 logins_since_install_override=bot_configuration[0].logins_since_install,
                                 registrations_since_install_override=bot_configuration[0].registrations_since_install)
 
-        self.bot_username = bot_configuration[0].username
-        self.bot_display_name = ""
-        self.bot_id = bot_configuration[0].bot_id
-        self.config = config_data
-
     # --------------------------------------------
     #  API - Login/Authentication Event Listeners
     # --------------------------------------------
 
     def on_authenticated(self):
-        print(Fore.GREEN + Style.BRIGHT + "Now I'm Authenticated" + Style.RESET_ALL)
+        print(self.info + f'Authenticated' + Style.RESET_ALL)
+        self.client.request_roster()
 
     def on_login_ended(self, response: LoginResponse):
-        print(Fore.RED + Style.BRIGHT + "Full name: {} {}".format(response.first_name, response.last_name)
-              + Style.RESET_ALL)
+        print(self.info + f'Full name: {response.first_name} {response.last_name}' + Style.RESET_ALL)
 
         self.bot_display_name = response.first_name + " " + response.last_name
-        print(Fore.GREEN + "Loading All Groups Cache" + Style.RESET_ALL)
+        print(self.info + f'Loading All Groups Cache' + Style.RESET_ALL)
         gcloading = time.time()
         Database(self.config).load_all_bot_groups_to_cache(self.bot_id)
         Database(self.config).load_bot_data_to_cache(self.bot_id)
-        print(Fore.GREEN + "Finished Loading groups Cache in " + str(
-            time.time() - gcloading) + " seconds." + Style.RESET_ALL)
-
+        print(self.info + f'Finished Loading groups Cache in {str(time.time() - gcloading)} seconds.' + Style.RESET_ALL)
 
     # ------------------------------------
     #  API - PM Event Listeners
@@ -103,24 +104,26 @@ class LuckyBot(KikClientCallback):
     # Listener for Is Typing in PM
     def on_is_typing_event_received(self, response: chatting.IncomingIsTypingEvent):
 
-        if self.config["general"]["debug"] == 2:
-            print(Fore.YELLOW + "[+] {} is now {}typing.".format(response.from_jid,
-                                                                 "not " if not response.is_typing else "") + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 2:
+            if not response.is_typing:
+                print(self.debug + f'{response.from_jid} is now not typing.' + Style.RESET_ALL)
+            else:
+                print(self.debug + f'{response.from_jid} is now typing.' + Style.RESET_ALL)
+
         return
 
     # Listener for Message Delivered for PM
     def on_message_delivered(self, response: chatting.IncomingMessageDeliveredEvent):
 
-        if self.config["general"]["debug"] == 2:
-            print(Fore.LIGHTMAGENTA_EX + "[+] Chat message with ID {} is delivered.".format(
-                response.message_id) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 2:
+            print(self.debug + f'Chat message with ID {response.message_id} is delivered.' + Style.RESET_ALL)
+
         return
 
     # Listener for Message Read for PM
     def on_message_read(self, response: chatting.IncomingMessageReadEvent):
-        if self.config["general"]["debug"] == 2:
-            print(Fore.LIGHTMAGENTA_EX + "[+] Human has read the message with ID {}.".format(
-                response.message_id) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 2:
+            print(self.debug + f'Human has read the message with ID {response.message_id}.' + Style.RESET_ALL)
         return
 
     # ------------------------------------
@@ -129,17 +132,20 @@ class LuckyBot(KikClientCallback):
 
     # Listener for Group Message Read/Delivered
     def on_group_receipts_received(self, response: chatting.IncomingGroupReceiptsEvent):
-        if self.config["general"]["debug"] == 2:
-            print(Fore.LIGHTMAGENTA_EX + "[+] Message with ID {} has been {}".format(
-                response.message_id, response.type) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 2:
+            print(self.debug + f'Message with ID {response.message_id} has been {response.type}.' + Style.RESET_ALL)
             group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
             if not group_data:
                 return
             if "lurkers" in group_data:
-                RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid, response.group_jid)
+                RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
+                                                                 response.group_jid)
             else:
                 if "group_members" in group_data:
-                    RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"], response.group_jid)
+                    RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"],
+                                                                  response.group_jid)
+                    RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
+                                                                     response.group_jid)
             return
         return
 
@@ -150,10 +156,12 @@ class LuckyBot(KikClientCallback):
 
     # Listener for Group Typing Events
     def on_group_is_typing_event_received(self, response: chatting.IncomingGroupIsTypingEvent):
-        if self.config["general"]["debug"] == 2:
-            print(Fore.LIGHTYELLOW_EX + "[+] {} is now {}typing in group {}".format(response.from_jid,
-                                                                                    "not " if not response.is_typing else "",
-                                                                                    response.group_jid) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 2:
+            if not response.is_typing:
+                print(self.debug + f'{response.from_jid} is now not typing in group {response.group_jid}.' + Style.RESET_ALL)
+            else:
+                print(self.debug + f'{response.from_jid} is now typing in group {response.group_jid}.' + Style.RESET_ALL)
+
         return
 
     # Listener for when a group Status Message as been received.
@@ -211,39 +219,50 @@ class LuckyBot(KikClientCallback):
     # ------------------------------------
 
     def on_status_message_received(self, response: chatting.IncomingStatusResponse):
-        if self.config["general"]["debug"] == 1:
-            print(Fore.YELLOW + "[+] Status message from {}: {}".format(response.from_jid,
-                                                                        response.status) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 1:
+            print(self.debug + f'Status message from {response.from_jid}: {response.status}.' + Style.RESET_ALL)
+
         return
 
     def on_username_uniqueness_received(self, response: UsernameUniquenessResponse):
-        if self.config["general"]["debug"] == 1:
-            print("Is {} a unique username? {}".format(response.username, response.unique))
+        if self.config["general"]["debug"] >= 2:
+            print(self.debug + f'Is {response.username} a unique username? {response.unique}.' + Style.RESET_ALL)
+
+        if response.username is not None:
+            heartbeat_queue = RedisCache(self.config).get_heartbeat_data(self.bot_id)
+            if heartbeat_queue:
+                trip = time.time() - heartbeat_queue["time"]
+                if self.config.log_settings["debug"] >= 1:
+                    print("Took " + str(trip) + " seconds. Bot Alive")
+                heartbeat_queue["received"] = True
+                RedisCache(self.config).update_heartbeat_data(heartbeat_queue, self.bot_id)
+            else:
+                print("Queue was empty!")
         return
 
     def on_sign_up_ended(self, response: RegisterResponse):
-        if self.config["general"]["debug"] == 1:
-            print("[+] Registered as " + response.kik_node)
+        print(self.info + f'Is Registered as {response.kik_node}.' + Style.RESET_ALL)
         return
 
     # Listener for when group search is received.
     def on_group_search_response(self, response: GroupSearchResponse):
-        if self.config["general"]["debug"] == 1:
-            print(Fore.MAGENTA + "[+] Search Response: {}" + str(response.groups) + Style.RESET_ALL)
+        print(self.info + f'Search Response: {response.groups}.' + Style.RESET_ALL)
+
         return
 
     # Listener for when roster is received.
     def on_roster_received(self, response: FetchRosterResponse):
-        if self.config["general"]["debug"] == 1:
-            print(Fore.YELLOW + "[+] Chat partners:\n" + '\n'.join(
-                [str(member) for member in response.peers]) + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 1:
+            members = '\n'.join([str(member) for member in response.peers])
+            partner_count = len(response.peers)
+            print(self.debug + f'Roster Recieved\nTotal Peers: {str(partner_count)}\nPeers: {members}.' + Style.RESET_ALL)
+
         return
 
     # Listener for friend attributions
     def on_friend_attribution(self, response: chatting.IncomingFriendAttribution):
-        if self.config["general"]["debug"] == 1:
-            print(
-                Fore.LIGHTYELLOW_EX + "[+] Friend attribution request from " + response.referrer_jid + Style.RESET_ALL)
+        if self.config["general"]["debug"] >= 1:
+            print(self.info + f'Friend Request From: {response.referrer_jid}.' + Style.RESET_ALL)
         return
 
     # ------------------------------------
@@ -251,19 +270,35 @@ class LuckyBot(KikClientCallback):
     # ------------------------------------
 
     def on_connection_failed(self, response: ConnectionFailedResponse):
-        print("[-] Connection failed: " + response.message)
+        print(self.critical + f'Connection failed: {response.message}.' + Style.RESET_ALL)
         return
 
     def on_login_error(self, login_error: LoginError):
-        #print(f'[-] Login Error: {login_error.error_code}, {login_error.error_messages}')
+        print(self.critical + f'Login failed: {login_error.error_code}, {login_error.error_messages}.' + Style.RESET_ALL)
+        if login_error.is_captcha():
+            send_email(self.config, "captcha", self.bot_display_name, self.bot_id)
+            heartbeat_queue = RedisCache(self.config).get_heartbeat_data(self.bot_id)
+            heartbeat_queue["captcha"] = True
+            heartbeat_queue["offline"] = True
+            RedisCache(self.config).update_heartbeat_data(heartbeat_queue, self.bot_id)
+            sys.exit(1)
         return
 
     def on_temp_ban_received(self, response: TempBanElement):
-        print(f'[-] Temporary Ban: {response.ban_title}, {response.ban_message}\nEnds: {response.ban_end_time}')
+        print(self.critical + f'Temporary Ban: {response.ban_title}, {response.ban_message}\nEnds: {response.ban_end_time}.' + Style.RESET_ALL)
+
+        send_email(self.config, "temp_ban", self.bot_display_name, self.bot_id)
+        heartbeat_queue = RedisCache(config_data).get_heartbeat_data(self.bot_id)
+        heartbeat_queue["captcha"] = False
+        heartbeat_queue["offline"] = True
+        heartbeat_queue["temp_ban"] = False
+        heartbeat_queue["temp_ban_time"] = response.ban_end_time
+        RedisCache(config_data).update_heartbeat_data(heartbeat_queue, self.bot_id)
+
         return
 
     def on_register_error(self, response: SignUpError):
-        print("[-] Register error: {}".format(response.message))
+        print(self.critical + f'Registration Error: {response.message}.' + Style.RESET_ALL)
         return
 
 

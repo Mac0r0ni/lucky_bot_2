@@ -7,6 +7,8 @@
 import os
 import re
 
+from colorama import Style, Fore
+
 from lib.database_handler import Database
 from lib.remote_admin_handler import RemoteAdmin
 
@@ -19,10 +21,14 @@ class FeatureStatus:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def set_feature_status(self, chat_message, status, feature):
         exit_code = Database(self.config).change_feature_status(status, feature, chat_message.group_jid,
-                                                                chat_message.from_jid)
+                                                                chat_message.from_jid, self.bot_id)
 
         if "-" in feature:
             feature_name = feature.split('-')[0].capitalize() + " " + feature.split('-')[1].split('_')[0].capitalize()
@@ -47,14 +53,8 @@ class FeatureStatus:
     def set_feature_message(self, chat_message, setting, value):
         current_dir = os.getcwd() + "/"
         # remove \ from messages if they are in there. They do not convert to or from json correctly
-        if "\\" in value:
-            value = value.replace("\\", "")
-        if "\"" in value:
-            value = value.replace("\"", "“")
-        if "\'" in value:
-            value = value.replace("\'", "")
         exit_code = Database(self.config).change_feature_message(setting, value, chat_message.group_jid,
-                                                                 chat_message.from_jid)
+                                                                 chat_message.from_jid, self.bot_id)
         if "-" in setting:
             feature_name = setting.split('-')[0].capitalize() + " " + setting.split('-')[1].split('_')[
                 0].capitalize() + " " + \
@@ -103,7 +103,7 @@ class FeatureStatus:
                                               else feature_name + " can only be set by admin")
 
     def set_trigger_status(self, chat_message, status, feature, group_jid, peer_jid):
-        exit_code = Database(self.config).change_feature_status(status, feature, group_jid, peer_jid)
+        exit_code = Database(self.config).change_feature_status(status, feature, group_jid, peer_jid, self.bot_id)
         if status == 0:
             RemoteAdmin(self).send_message(chat_message,
                                                   str(feature.split("_")[0]).capitalize() + ": Off" if exit_code == 1
@@ -140,7 +140,7 @@ class FeatureStatus:
                                                                0]).capitalize() + " Admin Mode already enabled")
 
     def set_censor_status(self, chat_message, status, feature):
-        exit_code = Database(self.config).change_feature_status(status, feature, chat_message.group_jid, chat_message.from_jid)
+        exit_code = Database(self.config).change_feature_status(status, feature, chat_message.group_jid, chat_message.from_jid, self.bot_id)
         if status == 0:
             RemoteAdmin(self).send_message(chat_message,
                                                   str(feature.split("_")[0]).capitalize() + ": Off" if exit_code == 1

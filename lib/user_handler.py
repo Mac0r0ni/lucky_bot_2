@@ -1,5 +1,7 @@
 import time
 
+from colorama import Style, Fore
+
 from lib.database_handler import Database
 from lib.message_processing_handler import process_message, MessageProcessing
 from lib.redis_handler import RedisCache
@@ -13,6 +15,10 @@ class User:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def user_join_group(self, response, invite_status):
         display_name = response.status.split(" has joined the ")[0].rstrip()
