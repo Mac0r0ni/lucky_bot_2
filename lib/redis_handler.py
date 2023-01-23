@@ -157,6 +157,12 @@ class RedisCache:
     def remove_all_talker_lurkers(self, activity, group_jid):
         self.r.delete(group_jid.split('@')[0], activity)
 
+    def reset_all_talker_lurkers(self, activity, group_jid):
+        self.r.delete(group_jid.split('@')[0], activity)
+        members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
+        if members:
+            RedisCache(self.config).add_all_talker_lurker(activity, members, group_jid)
+
     def add_timer_cache(self, timer_jid, group_jid):
         peer_data = {"stop": False}
         self.r.hset(group_jid.split('@')[0] + "_timer_cache", timer_jid, json.dumps(peer_data))
@@ -546,7 +552,6 @@ class RedisCache:
     def rem_from_media_forward_queue(self, peer_jid, bot_id):
         self.r.hdel(str(bot_id) + "_forward_queue", peer_jid)
 
-
     # --------------------------------------
     #  Redis Cache - Group Command Cooldowns
     # --------------------------------------
@@ -572,51 +577,61 @@ class RedisCache:
     #  Redis Cache - Group/User Activity History
     # ------------------------------------
 
-    def add_single_talker_lurker(self, activity, user_jid, group_jid):
-        data = self.r.hget(group_jid.split('@')[0], activity)
+    def add_single_history(self, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], "history")
         if data:
             data_json = json.loads(data)
-            data_json[user_jid] = 0
-            self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+            data_json[user_jid] = {"message": 0, "gif": 0, "image": 0, "video": 0}
+            self.r.hset(group_jid.split('@')[0], "history", json.dumps(data_json))
         else:
             members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
             if members:
-                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
-                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
+                RedisCache(self.config).add_all_history(members, group_jid)
+                RedisCache(self.config).add_all_history(members, group_jid)
 
-    def remove_single_talker_lurker(self, activity, user_jid, group_jid):
-        data = self.r.hget(group_jid.split('@')[0], activity)
+    def remove_single_history(self, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], "history")
         if data:
             data_json = json.loads(data)
             if user_jid in data_json:
                 del data_json[user_jid]
-                self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+                self.r.hset(group_jid.split('@')[0], "history", json.dumps(data_json))
 
-    def set_single_talker_lurker(self, activity, time, user_jid, group_jid):
-        data = self.r.hget(group_jid.split('@')[0], activity)
+    def set_single_history(self, type, user_jid, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], "history")
         if data:
+
             data_json = json.loads(data)
-            data_json[user_jid] = time
-            self.r.hset(group_jid.split('@')[0], activity, json.dumps(data_json))
+            if user_jid in data_json:
+                data_json[user_jid][type] += 1
+                self.r.hset(group_jid.split('@')[0], "history", json.dumps(data_json))
+            else:
+                RedisCache(self.config).add_single_history(user_jid, group_jid)
         else:
             members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
             if members:
-                RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
-                RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
+                RedisCache(self.config).add_all_history(members, group_jid)
+                RedisCache(self.config).add_all_history(members, group_jid)
 
-    def get_all_talker_lurkers(self, activity, group_jid):
-        data = self.r.hget(group_jid.split('@')[0], activity)
+    def get_all_history(self, group_jid):
+        data = self.r.hget(group_jid.split('@')[0], "history")
         if data:
             data_json = json.loads(data)
             return data_json
         else:
             return False
 
-    def add_all_talker_lurker(self, activity, member_list, group_jid):
+    def add_all_history(self, member_list, group_jid):
         data = {}
         for m in member_list:
-            data[m] = 0
-        self.r.hset(group_jid.split('@')[0], activity, json.dumps(data))
+            data[m] = {"message": 0, "gif": 0, "image": 0, "video": 0}
+        self.r.hset(group_jid.split('@')[0], "history", json.dumps(data))
 
-    def remove_all_talker_lurkers(self, activity, group_jid):
-        self.r.delete(group_jid.split('@')[0], activity)
+    def reset_all_history(self, group_jid):
+        self.r.delete(group_jid.split('@')[0], "history")
+        members = json.loads(self.r.hget(group_jid.split('@')[0], "group_members"))
+        if members:
+            RedisCache(self.config).add_all_history(members, group_jid)
+
+    def remove_all_history(self, group_jid):
+        self.r.delete(group_jid.split('@')[0], "history")

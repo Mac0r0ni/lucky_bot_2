@@ -6,8 +6,10 @@ from colorama import Fore, Style
 
 from lib.database_handler import Database
 from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification, GroupTimer, LeaveMessage, \
-    BotHelpers, Silent, Censor, Forward, Profile, Purge, UserCap, Whitelist, BotSFW, BackupRestore, DataTransfer
+    BotHelpers, Silent, Censor, Forward, Profile, Purge, UserCap, Whitelist, BotSFW, BackupRestore, DataTransfer, \
+    BotStatus, GroupStats
 from lib.group_fun_handler import ChanceGames
+from lib.history_handler import GroupHistory
 from lib.message_processing_handler import process_message
 from lib.redis_handler import RedisCache
 from lib.remote_admin_handler import RemoteAdmin
@@ -67,6 +69,8 @@ class GroupMessage:
                 # add talker/lurker time
         RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), chat_message.from_jid, chat_message.group_jid)
         RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), chat_message.from_jid, chat_message.group_jid)
+        RedisCache(self.config).set_single_history("message", chat_message.from_jid, chat_message.group_jid)
+
 
         if group_settings["bot-helper_status"] == 0:
             if name == "Rage bot" or name == "Navi 🦋" or name == "C​а​s​i​n​ο​ B​ο​t​":
@@ -210,6 +214,9 @@ class GroupMessage:
                 # grab username change and status
                 NameGrab(self).main(chat_message, prefix)
                 return
+            elif prefix + "history" in gm:
+                GroupHistory(self).main(chat_message, prefix)
+                return
             elif prefix + "trigger" in gm or prefix + "mode" in gm or prefix + "delete" in gm:
                 Triggers(self).main(chat_message, prefix)
                 return
@@ -221,6 +228,12 @@ class GroupMessage:
                 return
             elif prefix + "search" in gm or prefix + "youtube" in gm or prefix + "yt" in gm or prefix + "who" in gm or prefix + "urban" in gm:
                 Search(self).main(chat_message, prefix)
+                return
+            elif gm == prefix + "status":
+                BotStatus(self).main(chat_message, prefix)
+                return
+            elif gm == prefix + "stats":
+                GroupStats(self).main(chat_message, prefix)
                 return
             elif gm == prefix + "gjid":  # check if the message is equal to gjid
                 # if it is send a group message with the group jid

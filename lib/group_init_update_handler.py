@@ -89,9 +89,13 @@ class GroupInitUpdate:
             RedisCache(self.config).remove_all_talker_lurkers("talkers", group_jid)
             RedisCache(self.config).remove_all_talker_lurkers("lurkers", group_jid)
 
+            RedisCache(self.config).remove_all_history(group_jid)
+
             # create talkers/lurkers data
             RedisCache(self.config).add_all_talker_lurker("talkers", members, group_jid)
             RedisCache(self.config).add_all_talker_lurker("lurkers", members, group_jid)
+
+            RedisCache(self.config).add_all_history(members, group_jid)
 
 
             Database(self.config).add_group_to_database(group_jid, group_hash, group_name, group_settings, group_messages,

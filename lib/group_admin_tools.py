@@ -1511,23 +1511,27 @@ class DataTransfer:
             source_hash = hashes.split(" ")[0]
             destination_hash = hashes.split(" ")[1]
             result, destination_gjid = Database(self.config).transfer_group_database(source_hash, destination_hash,
-                                                                          message.from_jid, message_source, self.bot_id)
+                                                                                     message.from_jid, message_source,
+                                                                                     self.bot_id)
             if result == 1:
                 if message_source == "gm":
                     RemoteAdmin(self).send_message(message,
-                                                  f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
+                                                   f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
                 else:
-                    self.client.send_chat_message(message.from_jid, f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Transfer Complete: \nFrom: {source_hash} To: {destination_hash}')
                 self.client.send_chat_message(destination_gjid, "Remote Data Transfer Complete.")
             elif result == 2:
                 if message_source == "gm":
-                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nMust be admin in source group. {source_hash}')
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nMust be admin in source group. {source_hash}')
                 else:
                     self.client.send_chat_message(message.from_jid,
                                                   f'Error: {str(result)} \nMust be admin in source group. {source_hash}')
             elif result == 3:
                 if message_source == "gm":
-                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nMust be admin in destination group. {destination_hash}')
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nMust be admin in destination group. {destination_hash}')
                 else:
                     self.client.send_chat_message(message.from_jid,
                                                   f'Error: {str(result)} \nMust be admin in destination group. {destination_hash}')
@@ -1538,19 +1542,25 @@ class DataTransfer:
                     self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nTransfer Data Corrupt')
             elif result == 5:
                 if message_source == "gm":
-                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
                 else:
-                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nSource group not found, check for correct hash. {source_hash}')
             elif result == 6:
                 if message_source == "gm":
-                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
                 else:
-                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nDestination group not found, check for correct hash. {destination_hash}')
             elif result == 7:
                 if message_source == "gm":
-                    RemoteAdmin(self).send_message(message, f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
+                    RemoteAdmin(self).send_message(message,
+                                                   f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
                 else:
-                    self.client.send_chat_message(message.from_jid, f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
+                    self.client.send_chat_message(message.from_jid,
+                                                  f'Error: {str(result)} \nCan not get your user info from source group. {source_hash}')
             elif result == 8:
                 if message_source == "gm":
                     RemoteAdmin(self).send_message(message,
@@ -1571,3 +1581,195 @@ class DataTransfer:
             else:
                 self.client.send_chat_message(message.from_jid, 'Invalid Transfer Option')
 
+
+class GroupStats:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        if s == prefix + "stats":
+            GroupStats(self).get_group_stats(chat_message)
+
+    def get_group_stats(self, chat_message):
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        group_hash = group_data["group_hash"]
+        group_name = group_data["group_name"]
+        group_owner = group_data["group_owner"]
+        group_admins = group_data["group_admins"]
+        group_members = group_data["group_members"]
+        group_history = group_data["history"]
+
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        all_admins = {**bot_admins, **group_admins}
+        if all_admins:
+            if chat_message.from_jid in all_admins:
+                talkers = RedisCache(self.config).get_all_talker_lurkers("talkers", chat_message.group_jid)
+                sort_users = sorted(talkers.items(), key=lambda x: x[1], reverse=True)
+                active_count = 0
+                count = 0
+                activity = 0
+                for u in sort_users:
+                    count += 1
+                    if count == 1 and u[0] != chat_message.from_jid:
+                        activity = u[1]
+                    elif count == 2 and u[0] != chat_message.from_jid:
+                        activity = u[1]
+                    if time.time() - u[1] <= 86400:
+                        active_count += 1
+                last_activity = round(time.time() - activity)
+                if last_activity >= 86400:
+                    ctime = (last_activity // 86400)
+                    if ctime == 1:
+                        c_units = "day"
+                    else:
+                        c_units = "days"
+                elif 86400 > last_activity >= 3600:
+                    ctime = (last_activity // 36000)
+                    if ctime == 1:
+                        c_units = "hour"
+                    else:
+                        c_units = "hours"
+                elif 3600 > last_activity >= 60:
+                    ctime = (last_activity // 60)
+                    if ctime == 1:
+                        c_units = "minute"
+                    else:
+                        c_units = "minutes"
+                elif 60 > last_activity > 0:
+                    ctime = last_activity
+                    if ctime == 1:
+                        c_units = "second"
+                    else:
+                        c_units = "seconds"
+                if os.path.exists(self.config["paths"]["backup"] + chat_message.group_jid + "/database.json"):
+                    last_backup = round(time.time() - os.path.getmtime(
+                        self.config["paths"]["backup"] + chat_message.group_jid + "/database.json"))
+                    if last_backup >= 86400:
+                        btime = (last_backup // 86400)
+                        if btime == 1:
+                            b_units = "day"
+                        else:
+                            b_units = "days"
+                    elif 86400 > last_backup >= 3600:
+                        btime = (last_backup // 36000)
+                        if btime == 1:
+                            b_units = "hour"
+                        else:
+                            b_units = "hours"
+                    elif 3600 > last_backup >= 60:
+                        btime = (last_backup // 60)
+                        if btime == 1:
+                            b_units = "minute"
+                        else:
+                            b_units = "minutes"
+                    elif 60 > last_backup > 0:
+                        btime = last_backup
+                        if btime == 1:
+                            b_units = "second"
+                        else:
+                            b_units = "seconds"
+                else:
+                    btime = "None"
+                    b_units = "None"
+
+                group_activity = {"message": 0, "image": 0, "gif": 0, "video": 0}
+                for ac in group_history:
+                    group_activity["message"] += group_history[ac]["message"]
+                    group_activity["image"] += group_history[ac]["image"]
+                    group_activity["gif"] += group_history[ac]["gif"]
+                    group_activity["video"] += group_history[ac]["video"]
+
+                stats_response = f"++ {group_name} ++\n"
+                stats_response += f"Hash: {group_hash}\n"
+                stats_response += f'Last Backup: {str(round(btime)) + " " + b_units + " ago." if btime != "None" else btime}\n'
+                for o in group_owner:
+                    stats_response += "Owner: " + group_members[o]["display_name"] + "\n"
+                stats_response += "Admins: " + str(len(group_admins)) + "\n"
+                stats_response += "Members: " + str(len(group_members)) + "\n"
+                stats_response += str("                           \n")
+                stats_response += "++++ Activity Stats ++++\n"
+                stats_response += "Last Activity: " + str(round(ctime)) + " " + c_units + " ago.\n"
+                stats_response += "Active Users: " + str(active_count) + "/" + str(
+                    len(group_members)) + " last 24 hrs.\n"
+                stats_response += "Chat Messages: " + str(group_activity["message"]) + "\n"
+                stats_response += "Chat Images: " + str(group_activity["image"]) + "\n"
+                stats_response += "Chat GIFs: " + str(group_activity["gif"]) + "\n"
+                stats_response += "Chat Video: " + str(group_activity["video"]) + "\n"
+                stats_response += str("                           \n")
+                stats_response += "++++ Protected By ++++\n"
+                stats_response += "Lucky 🍀 bot number " + str(self.bot_id)
+                RemoteAdmin(self).send_message(chat_message, stats_response)
+            else:
+                RemoteAdmin(self).send_message(chat_message, f"Only Admins can use {chat_message.body}")
+
+
+class BotStatus:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        if s == prefix + "status":
+            group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+            group_admins = group_data["group_admins"]
+            group_settings = group_data["group_settings"]
+            bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+            all_admins = {**bot_admins, **group_admins}
+            if chat_message.from_jid in all_admins:
+                settings_message = "++ Settings for: $gh ++\n"
+                on = "🟢"
+                off = "🔴"
+
+                for status in group_settings:
+                    if "users" in status or "language" in status or "time" in status or "days" in status or "max" in status or "confessions" in status or "casino" in status or "jackpot" in status:
+                        continue
+                    if "-" in status:
+                        feature_name = status.split('-')[0].capitalize() + " " + status.split('-')[1].split('_')[
+                            0].capitalize()
+                        feature_type = status.split("_")[1].capitalize()
+                    else:
+                        feature_name = str(status.split("_")[0]).capitalize()
+                        feature_type = status.split("_")[1].capitalize()
+
+                    if group_settings[status] > 0:
+                        if status == "trigger_status":
+                            if group_settings[status] == 1:
+                                settings_message += on + " " + feature_name + ": Normal Mode\n"
+                            elif group_settings[status] == 2:
+                                settings_message += on + " " + feature_name + ": Mixed Mode\n"
+                            elif group_settings[status] == 3:
+                                settings_message += on + " " + feature_name + ": Admin Mode\n"
+                        elif status == "censor_status":
+                            if group_settings[status] == 1:
+                                settings_message += on + " " + feature_name + ": Message Mode\n"
+                            elif group_settings[status] == 2:
+                                settings_message += on + " " + feature_name + ": Search Mode\n"
+                        else:
+                            settings_message += on + " " + feature_name + "\n"
+                    else:
+                        settings_message += off + " " + feature_name + " " + feature_type + "\n"
+
+                final = process_message(self.config, "group", settings_message, chat_message.from_jid,
+                                        chat_message.group_jid, self.bot_id, "0")
+                RemoteAdmin(self).send_message(chat_message, final)
+            else:
+                RemoteAdmin(self).send_message(chat_message, f"Only Admins can use {chat_message.body}")

@@ -148,6 +148,7 @@ class Triggers:
 
         elif " > " in chat_message.body and "\">\"" not in s and sub_status != 0:
             sub = [x.strip() for x in chat_message.body.split(" > ")]
+            print(sub)
             if sub[0].count(' ') > 4 or len(sub[0]) > 75:
 
                 RemoteAdmin(self).send_message(chat_message,

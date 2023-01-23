@@ -98,6 +98,12 @@ class VideoResponse:
                                                                      response.group_jid)
                     RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
                                                                      response.group_jid)
+            if "history" in group_data:
+                RedisCache(self.config).set_single_history("video", response.from_jid, response.group_jid)
+            else:
+                if "group_members" in group_data:
+                    RedisCache(self.config).add_all_history(group_data["group_members"], response.group_jid)
+                    RedisCache(self.config).set_single_history("video", response.from_jid, response.group_jid)
 
             media_message_queue = RedisCache(self.config).get_all_media_message_queue(response.group_jid)
             for su in media_message_queue:

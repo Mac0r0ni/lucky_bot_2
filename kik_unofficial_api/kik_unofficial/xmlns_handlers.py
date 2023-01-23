@@ -63,9 +63,11 @@ class XMPPMessageHandler(XmppHandler):
                     self.callback.on_video_received(IncomingVideoMessage(data))
                 elif app_id == 'com.kik.cards':
                     self.callback.on_card_received(IncomingCardMessage(data))
+                else:
+                    log.info(app_id)
             else:
                 # what else? GIFs?
-                log.debug("[-] Received unknown chat message. contents: {}".format(str(data)))
+                log.info("[-] Received unknown chat message. contents: {}".format(str(data)))
 
         elif data['type'] == 'receipt':
             #
@@ -101,9 +103,9 @@ class XMPPMessageHandler(XmppHandler):
             elif data.find('sysmsg'):
                 self.callback.on_group_sysmsg_received(IncomingGroupSysmsg(data))
             else:
-                log.debug("[-] Received unknown groupchat message. contents: {}".format(str(data)))
+                log.info("[-] Received unknown groupchat message. contents: {}".format(str(data)))
         else:
-            log.debug("[-] Received unknown message type. contents: {}".format(str(data)))
+            log.info("[-] Received unknown message type. contents: {}".format(str(data)))
 
 
 class GroupXMPPMessageHandler(XmppHandler):
@@ -132,9 +134,11 @@ class GroupXMPPMessageHandler(XmppHandler):
                 self.callback.on_video_received(IncomingVideoMessage(data))
             elif app_id == 'com.kik.cards':
                 self.callback.on_card_received(IncomingCardMessage(data))
+            else:
+                log.info(app_id)
 
         else:
-            log.debug("[-] Received unknown group message. contents: {}".format(str(data)))
+            log.info("[-] Received unknown group message. contents: {}".format(str(data)))
 
 
 class CheckUsernameUniqueResponseHandler(XmppHandler):

@@ -77,9 +77,11 @@ class ImageResponse:
             # Group Image Response
             if self.config["general"]["debug"] == 1:
                 print(Fore.LIGHTRED_EX + "Group Image Response" + Style.RESET_ALL)
-
+            if response.group_jid == "1100257133458_g@groups.kik.com":
+                print(self.info + "Group Image Response" + Style.RESET_ALL)
             group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
             if not group_data:
+                print(self.critical + "No Group Data for Image Response")
                 return
             if "lurkers" in group_data and "talkers" in group_data:
                 RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), response.from_jid,
@@ -97,7 +99,12 @@ class ImageResponse:
                     RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
                                                                      response.group_jid)
 
-
+            if "history" in group_data:
+                RedisCache(self.config).set_single_history("image", response.from_jid, response.group_jid)
+            else:
+                if "group_members" in group_data:
+                    RedisCache(self.config).add_all_history(group_data["group_members"], response.group_jid)
+                    RedisCache(self.config).set_single_history("image", response.from_jid, response.group_jid)
 
             media_message_queue = RedisCache(self.config).get_all_media_message_queue(response.group_jid)
             for su in media_message_queue:
@@ -113,6 +120,7 @@ class ImageResponse:
                 if str(su.decode("utf-8")) == response.from_jid:
                     sub_data = json.loads(sub_queue[su].decode('utf8'))
                     if sub_data["response"][:2] == "$i":
+                        print(self.warning + "Found in media sub queue, processing")
                         process_image_sub(self, response, sub_data["action"], sub_data["type"],
                                           sub_data["sub"],
                                           sub_data["response"], response.image_url,
