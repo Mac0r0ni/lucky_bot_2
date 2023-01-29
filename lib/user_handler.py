@@ -73,12 +73,14 @@ class User:
                             request_id = self.client.xiphias_get_users_by_alias(response.status_jid)
                             peer_data["peer_info_request_id"] = request_id
                             peer_data["peer_info_request_type"] = "xpub"
+                            peer_data["peer_info_request_tries"] = 0
 
                         else:
                             # if private group we request by jid
                             request_id = self.client.xiphias_get_users(response.status_jid)
                             peer_data["peer_info_request_id"] = request_id
                             peer_data["peer_info_request_type"] = "xpri"
+                            peer_data["peer_info_request_tries"] = 0
 
                         # send peer data to redis join_queue cache
                         RedisCache(self.config).add_to_join_queue(response.status_jid, peer_data, self.bot_id)
@@ -126,12 +128,14 @@ class User:
                                 request_id = self.client.xiphias_get_users_by_alias(response.status_jid)
                                 peer_data["peer_info_request_id"] = request_id
                                 peer_data["peer_info_request_type"] = "xpub"
+                                peer_data["peer_info_request_tries"] = 0
 
                             else:
                                 # if private group we request by jid
                                 request_id = self.client.xiphias_get_users(response.status_jid)
                                 peer_data["peer_info_request_id"] = request_id
                                 peer_data["peer_info_request_type"] = "xpri"
+                                peer_data["peer_info_request_tries"] = 0
 
                             # send peer data to redis join_queue cache
                             RedisCache(self.config).add_to_join_queue(response.status_jid, peer_data, self.bot_id)
@@ -208,13 +212,19 @@ class User:
 
             info_id_1 = self.client.request_info_of_users(first_half)
             info_id_2 = self.client.request_info_of_users(second_half)
+            info_1_tries = 0
+            info_2_tries = 0
 
         else:
+            first_half = group_members_list
+            second_half = "None"
             info_id_1 = self.client.request_info_of_users(group_members_list)
             info_id_2 = "None"
+            info_1_tries = 0
+            info_2_tries = 0
 
         # add to group queue to let user data come back.
-        RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, group_hash, group_name,
+        RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, first_half, second_half, info_1_tries, info_2_tries, group_hash, group_name,
                                                          self.bot_id,
                                                          group_status,
                                                          response.group.owner,

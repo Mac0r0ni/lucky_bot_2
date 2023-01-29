@@ -676,7 +676,7 @@ class KikClient:
             if "bad-request" in dir(iq_element.error):
                 raise Exception(self.critical + f'Received a Bad Request error for stanza with ID {iq_element.attrs["id"]}')
             if iq_element.error.find("service-unavailable"):
-                xmlns_handlers.PeersInfoPeersInfoErrorHandler(self.callback, self).handle(iq_element)
+                xmlns_handlers.PeersInfoErrorHandler(self.callback, self).handle(iq_element)
                 return
 
         query = iq_element.query

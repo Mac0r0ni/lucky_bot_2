@@ -98,12 +98,18 @@ class GroupSysMessage:
 
                 info_id_1 = self.client.request_info_of_users(first_half)
                 info_id_2 = self.client.request_info_of_users(second_half)
+                info_1_tries = 0
+                info_2_tries = 0
 
             else:
+                first_half = group_members_list
+                second_half = "None"
                 info_id_1 = self.client.request_info_of_users(group_members_list)
                 info_id_2 = "None"
+                info_1_tries = 0
+                info_2_tries = 0
 
-            RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, group_hash, group_name, self.bot_id, 0,
+            RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, first_half, second_half, info_1_tries, info_2_tries, group_hash, group_name, self.bot_id, 0,
                                                   response.group.owner,
                                                   response.group.admins, response.group.members, response.group_jid)
 

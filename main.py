@@ -225,8 +225,79 @@ class LuckyBot(KikClientCallback):
     def on_peer_info_received(self, response: PeersInfoResponse):
         PeerInfo(self).peer_info_parser(response)
 
+    # Listener for when Peer Info or Xiphias request has an error.
     def on_peer_info_error(self, response: PeersInfoError):
-        print(self.critical + "Peer Response Error: " + str(response.__dict__))
+        print(self.critical + "Peer Response Error: " + str(response.error_code))
+        join_queue_users = RedisCache(self.config).get_all_join_queue(self.bot_id)
+        for x in join_queue_users:
+            join_data = json.loads(join_queue_users[x].decode("utf-8"))
+            if "peer_info_request_id" in join_data:
+                if join_data["peer_info_request_id"] == response.message_id:
+                    user_join_info = RedisCache(self.config).get_single_join_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From User Request: " + str(user_join_info["display_name"]))
+                    request_type = user_join_info["peer_info_request_type"]
+                    request_jid = user_join_info["alias_jid"]
+                    request_tries = int(user_join_info["peer_info_request_tries"])
+                    if request_tries <= 4:
+                        if request_type == "xpub":
+                            print(self.warning + "Retrying Peer Info Request")
+                            message_id = self.client.xiphias_get_users_by_alias(request_jid)
+                            user_join_info["peer_info_request_tries"] += 1
+                            user_join_info["peer_info_request_id"] = message_id
+                            RedisCache(self.config).add_to_join_queue(request_jid, user_join_info, self.bot_id)
+                            return
+                        elif request_type == "xpri":
+                            print(self.warning + "Retrying Peer Info Request")
+                            message_id = self.client.xiphias_get_users(request_jid)
+                            user_join_info["peer_info_request_tries"] += 1
+                            user_join_info["peer_info_request_id"] = message_id
+                            RedisCache(self.config).add_to_join_queue(request_jid, user_join_info, self.bot_id)
+                            return
+                        else:
+                            print(self.critical + "Unknown Request Type")
+                            return
+                    else:
+                        RedisCache(self.config).remove_from_join_queue(request_jid, self.bot_id)
+                        print(self.critical + "Peer Info Request Failed 5 times. Removing user from join queue.")
+                        return
+        group_queue = RedisCache(self.config).get_group_queue(self.bot_id)
+        for x in group_queue:
+            group_data = json.loads(group_queue[x].decode("utf-8"))
+            if "info_id_1" in group_data and "info_id_2" in group_data:
+                if group_data["info_id_1"] == response.message_id:
+                    group_queue_data = RedisCache(self.config).get_single_group_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From Group Request: " + str(group_queue_data["group_name"]))
+                    request_tries = int(group_queue_data["info_1_tries"])
+                    if request_tries <= 4:
+                        print(self.warning + "Retrying Group Info Request")
+                        message_id = self.client.request_info_of_users(group_queue_data["info_request_1"])
+                        request_tries += 1
+                        RedisCache(self.config).update_group_queue_json("info_1_tries", request_tries, x.decode('utf-8'), self.bot_id)
+                        RedisCache(self.config).update_group_queue_json("info_id_1", message_id,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        return
+                    else:
+                        RedisCache(self.config).remove_from_group_queue(x.decode('utf-8'), self.bot_id)
+                        print(self.critical + "Group Info Request Failed 5 times. Removing group from group queue.")
+                        return
+
+                elif group_data["info_id_2"] == response.message_id:
+                    group_queue_data = RedisCache(self.config).get_single_group_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From Group Request: " + str(group_queue_data["group_name"]))
+                    request_tries = int(group_queue_data["info_2_tries"])
+                    if request_tries <= 4:
+                        print(self.warning + "Retrying Group Info Request")
+                        message_id = self.client.request_info_of_users(group_queue_data["info_request_2"])
+                        request_tries += 1
+                        RedisCache(self.config).update_group_queue_json("info_2_tries", request_tries,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        RedisCache(self.config).update_group_queue_json("info_id_2", message_id,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        return
+                    else:
+                        RedisCache(self.config).remove_from_group_queue(x.decode('utf-8'), self.bot_id)
+                        print(self.critical + "Group Info Request Failed 5 times. Removing group from group queue.")
+                        return
 
     # Listener for when Peer Info received through Xiphias request.
     def on_xiphias_get_users_response(self, response: Union[UsersResponse, UsersByAliasResponse]):

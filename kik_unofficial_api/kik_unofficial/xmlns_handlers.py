@@ -13,7 +13,8 @@ from kik_unofficial.datatypes.xmpp.chatting import IncomingMessageDeliveredEvent
     IncomingVideoMessage, IncomingCardMessage
 from kik_unofficial.datatypes.xmpp.errors import SignUpError, LoginError
 from kik_unofficial.datatypes.xmpp.login import LoginResponse
-from kik_unofficial.datatypes.xmpp.roster import FetchRosterResponse, PeersInfoResponse, GroupSearchResponse
+from kik_unofficial.datatypes.xmpp.roster import FetchRosterResponse, PeersInfoResponse, GroupSearchResponse, \
+    PeersInfoError
 from kik_unofficial.datatypes.xmpp.sign_up import RegisterResponse, UsernameUniquenessResponse
 from kik_unofficial.datatypes.xmpp.xiphias import UsersResponse, UsersByAliasResponse
 
@@ -213,7 +214,7 @@ class RosterResponseHandler(XmppHandler):
 
 class PeersInfoErrorHandler(XmppHandler):
     def handle(self, data: BeautifulSoup):
-        self.callback.on_peer_info_error(data)
+        self.callback.on_peer_info_error(PeersInfoError(data))
 
 
 class PeersInfoResponseHandler(XmppHandler):
