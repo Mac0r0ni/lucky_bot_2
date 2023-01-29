@@ -101,6 +101,14 @@ class PeersInfoResponse(XMPPResponse):
         self.users = [User(item) for item in items]
 
 
+class PeersInfoError(XMPPResponse):
+    def __init__(self, data: BeautifulSoup):
+        super().__init__(data)
+        error = data.error
+        self.error_code = int(error['code'])
+        self.type = error['type']
+        self.message_id = data.attrs["id"]
+
 class AddFriendRequest(XMPPElement):
     """
     Represents a request to add some user (peer) as a friend

@@ -14,15 +14,14 @@ class GroupSysMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def group_sys_message_parser(self, response):
         if self.config["general"]["debug"] == 1:
-            print(Fore.GREEN + Style.BRIGHT + "[+] System message in {}: {}".format(response.group_jid,
-                                                                                    response.sysmsg) + Style.RESET_ALL)
+            print(self.info + f"System message in {response.group_jid}: {response.sysmsg}")
 
         if 'As a new member of this group' in response.sysmsg:
             kikjail_1 = response.sysmsg.split("emojis. In ")
@@ -32,8 +31,7 @@ class GroupSysMessage:
             return
 
         elif 'added you' in response.sysmsg:
-            print(Fore.GREEN + Style.BRIGHT + "[+] I have been added to the group {}".format(response.group_jid
-                                                                                             ) + Style.RESET_ALL)
+            print(self.info + f"I have been added to the group {response.group_jid}")
 
             # get bot data from cache
             bot_data = RedisCache(self.config).get_all_bot_config_data(self.bot_id)

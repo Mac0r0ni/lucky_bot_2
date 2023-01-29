@@ -21,8 +21,8 @@ class UserProcess:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -40,7 +40,6 @@ class UserProcess:
 
         if peer_data:
             if group_settings["profile_status"] == 1:
-                print("Process Default PFP")
                 if peer_data["pfp"] == "default.jpg":
                     self.client.send_chat_message(join_data["group_jid"],
                                                   "You need to set a profile picture to join this group.")
@@ -92,7 +91,6 @@ class UserProcess:
 
             else:
                 if group_settings["welcome_status"] == 1:
-                    print("Welcome Message Triggered")
                     if group_messages["welcome_message"] != "none":
                         # process and send welcome message
                         MessageProcessing(self).process_message_media("welcome_message",
@@ -111,7 +109,6 @@ class UserProcess:
 
             # Start Silent Timer
             Silent(self).silent_timeout(peer_jid, join_data["group_jid"], self.bot_id)
-            print("Start Silent Timer")
 
         else:
             # welcome message sent if verification is off and passed other checks like noob

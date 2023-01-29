@@ -123,7 +123,7 @@ class UsersByAliasRequest(XiphiasRequest):
     def get_protobuf_payload(self):
         request = GetUsersByAliasRequest()
         for peer_jid in self.alias_jids:
-            jid = request.ids.add()  # type: RequestedJid
+            jid = request.ids.add()  #type = RequestedJid
             jid.alias_jid.local_part = peer_jid.split('@')[0]
         return request
 

@@ -16,8 +16,8 @@ class GifResponse:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -26,7 +26,7 @@ class GifResponse:
         if not response.group_jid:
             # PM GIF Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "PM GIF Response" + Style.RESET_ALL)
+                print(self.debug + "PM GIF Response")
 
             remote_sessions = RedisCache(self.config).get_all_remote_sessions(self.bot_id)
             if response.from_jid.encode('utf-8') in remote_sessions:
@@ -39,10 +39,11 @@ class GifResponse:
         else:
             # Group GIF Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "Group GIF Response" + Style.RESET_ALL)
+                print(self.debug + "Group GIF Response")
 
             group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
             if not group_data:
+                print(self.critical + f"No Group Data for GIF Response: {response.group_jid}")
                 return
             if "lurkers" in group_data and "talkers" in group_data:
                 RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), response.from_jid,

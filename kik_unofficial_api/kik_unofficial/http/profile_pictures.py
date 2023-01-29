@@ -3,6 +3,7 @@ import os
 from threading import Thread
 
 import requests
+from colorama import Style, Fore
 from kik_unofficial.device_configuration import kik_version_info
 from kik_unofficial.datatypes.exceptions import KikApiException, KikUploadError
 from kik_unofficial.utilities.cryptographic_utilities import CryptographicUtils
@@ -35,7 +36,7 @@ def send(url, filename, jid, username, password):
 
 def picture_upload_thread(url, filename, headers):
     picture_data = get_file_bytes(filename)
-    log.debug('Uploading picture')
+    log.debug(f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] ' + 'Uploading Picture')
     r = requests.post(url, data=picture_data, headers=headers)
     if r.status_code != 200:
         raise KikUploadError(r.status_code, r.reason)

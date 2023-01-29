@@ -13,7 +13,7 @@ from lib.email_handler import send_email
 from lib.redis_handler import RedisCache
 
 
-def heartbeat_loop(client, config, bot_name, bot_id):
+def heartbeat_loop(client, config, bot_id):
     count = 0
     while True:
         time.sleep(60)
@@ -25,12 +25,11 @@ def heartbeat_loop(client, config, bot_name, bot_id):
             if count > 0 and heartbeat_queue["received"] is not False:
                 count = 0
             elif count < 2 and heartbeat_queue["received"] is False:
-                print("step 3 count: " + str(count))
                 count += 1
             elif heartbeat_queue["received"] is False:
                 heartbeat_queue["offline"] = True
                 RedisCache(config).update_heartbeat_data(heartbeat_queue, bot_id)
-                send_email(config, "offline", bot_name, bot_id)
+                send_email(config, "offline", bot_id)
                 command = "./home/lucky/lucky_bot/lucky.sh start lucky_bot_" + bot_id
                 command_format = command.split(" ")
                 result = subprocess.run(
