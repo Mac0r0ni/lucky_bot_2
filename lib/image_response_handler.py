@@ -22,8 +22,8 @@ class ImageResponse:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -32,7 +32,7 @@ class ImageResponse:
         if not response.group_jid:
             # PM Image Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "PM Image Response" + Style.RESET_ALL)
+                print(self.debug + "PM Image Response" + Style.RESET_ALL)
 
             forward_queue = RedisCache(self.config).get_all_media_forward_queue(self.bot_id)
             for fu in forward_queue:
@@ -76,12 +76,10 @@ class ImageResponse:
         else:
             # Group Image Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "Group Image Response" + Style.RESET_ALL)
-            if response.group_jid == "1100257133458_g@groups.kik.com":
-                print(self.info + "Group Image Response" + Style.RESET_ALL)
+                print(self.debug + "Group Image Response" + Style.RESET_ALL)
             group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
             if not group_data:
-                print(self.critical + "No Group Data for Image Response")
+                print(self.critical + f"No Group Data for Image Response: {response.group_jid}")
                 return
             if "lurkers" in group_data and "talkers" in group_data:
                 RedisCache(self.config).set_single_talker_lurker("talkers", time.time(), response.from_jid,
@@ -120,7 +118,6 @@ class ImageResponse:
                 if str(su.decode("utf-8")) == response.from_jid:
                     sub_data = json.loads(sub_queue[su].decode('utf8'))
                     if sub_data["response"][:2] == "$i":
-                        print(self.warning + "Found in media sub queue, processing")
                         process_image_sub(self, response, sub_data["action"], sub_data["type"],
                                           sub_data["sub"],
                                           sub_data["response"], response.image_url,

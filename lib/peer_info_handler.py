@@ -16,15 +16,16 @@ class PeerInfo:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def peer_info_parser(self, response):
         grab_queue = RedisCache(self.config).get_all_grab_queue(self.bot_id)
         if self.config["general"]["debug"] == 1:
-            print(Fore.GREEN + "[+] Peer info: " + str(response.users) + Style.RESET_ALL)
+            users = '\n'.join([str(member) for member in response.users])
+            print(self.info + f'Peer info: {users}')
 
         if len(response.users) > 1:
             res_dict = {}
@@ -39,7 +40,6 @@ class PeerInfo:
             for gr in group_queue:
                 g_data = RedisCache(self.config).get_single_group_queue(gr, self.bot_id)
                 if g_data["info_id_1"] == response.message_id and g_data["info_id_2"] == "None":
-                    print("Match 1, No Data in 2")
 
                     owner_dict, admins_dict, members_dict = process_peer_data(res_dict, g_data)
 
@@ -51,7 +51,6 @@ class PeerInfo:
                                                                      owner_dict, admins_dict, processed_members, gr.decode('utf-8'), self.bot_id)
                 elif g_data["info_id_1"] == response.message_id and g_data["info_id_2"] != "None":
                     # No Database update
-                    # print("Match 1, Data in 2")
                     owner_dict, admins_dict, members_dict = process_peer_data(res_dict, g_data)
 
                     RedisCache(self.config).update_group_queue_json("owner_resp", owner_dict, gr, self.bot_id)
@@ -61,7 +60,6 @@ class PeerInfo:
 
                 elif g_data["info_id_2"] == response.message_id and g_data["info_id_1"] == "None":
                     # Database update
-                    # print("Match 2, No Data in 1")
                     owner_dict, admins_dict, members_dict = process_peer_data(res_dict, g_data)
 
                     processed_members = process_group_users(members_dict, gr, self.bot_id, self.config)
@@ -74,7 +72,6 @@ class PeerInfo:
 
                 elif g_data["info_id_2"] == response.message_id and g_data["info_id_1"] != "None":
                     # No Database update
-                    # print("Match 2, Data in 1")
                     time.sleep(1)
                     self.callback.on_peer_info_received(response)
 
@@ -88,10 +85,6 @@ class PeerInfo:
                                  "jid": response.users[0].jid,
                                  "pfp": "default.jpg"}
 
-            if self.config["general"]["debug"] == 1:
-                print(Fore.GREEN + "[+] Peer info for: " + str(len(response.users)) + "\n" + str(
-                    response_data) + Style.RESET_ALL)
-
             if grab_queue:
                 if response.users[0].display_name.encode("utf-8") in grab_queue:
                     peer_data = RedisCache(self.config).get_single_grab_queue(response.users[0].display_name, self.bot_id)
@@ -103,7 +96,8 @@ class PeerInfo:
 
     def xiphias_info_parser(self, response):
         if self.config["general"]["debug"] == 1:
-            print(Fore.CYAN + " Users Response: " + str(response.users) + Style.RESET_ALL)
+            users = '\n'.join([str(member) for member in response.users])
+            print(self.info + f'Peer info: {users}')
 
         if len(response.users) < 1:
             return

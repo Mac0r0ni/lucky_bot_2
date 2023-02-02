@@ -4,6 +4,7 @@ import requests
 import time
 from threading import Thread
 
+from colorama import Style, Fore
 from kik_unofficial.datatypes.exceptions import KikUploadError
 from kik_unofficial.datatypes.xmpp.chatting import OutgoingChatVideo, OutgoingChatImage
 from kik_unofficial.utilities.cryptographic_utilities import CryptographicUtils
@@ -48,7 +49,7 @@ def upload_gallery_image(client, image: OutgoingChatImage, app_id, jid, username
 
 
 def image_upload_thread(client, image: OutgoingChatImage, url, headers):
-    log.debug('Uploading content')
+    log.debug(f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] ' + 'Uploading Image')
     r = requests.put(url, data=image.parsed_image["original"], headers=headers)
     if r.status_code != 200:
         raise KikUploadError(r.status_code, r.reason)
@@ -88,7 +89,7 @@ def upload_gallery_video(client, video: OutgoingChatVideo, app_id, jid, username
 
 
 def video_content_upload_thread(client, video: OutgoingChatVideo, url, headers):
-    log.debug('Uploading content')
+    log.debug(f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] ' + 'Uploading Video')
     r = requests.put(url, data=video.parsed_video['original'], headers=headers)
     if r.status_code != 200:
         raise KikUploadError(r.status_code, r.reason)

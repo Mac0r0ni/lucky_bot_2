@@ -697,7 +697,7 @@ class Database:
         source_data = RedisCache(self.config).get_all_group_data(source_group_jid)
         source_admins = source_data["group_admins"]
         source_members = source_data["group_members"]
-        destination_data = RedisCache(self.config).get_all_group_data(source_group_jid)
+        destination_data = RedisCache(self.config).get_all_group_data(destination_group_jid)
         destination_admins = destination_data["group_admins"]
         destination_members = destination_data["group_members"]
 
@@ -797,6 +797,7 @@ class Database:
                                                                 admins, members, user_triggers, admin_triggers,
                                                                 censor_words, bot_id)
                     import_file.close()
+                    Database(self.config).load_single_group_cache(destination_group_jid)
                 return 1, str(destination_group_jid) + "@groups.kik.com"
 
     def restore_group_database(self, peer_jid, group_jid, bot_id):

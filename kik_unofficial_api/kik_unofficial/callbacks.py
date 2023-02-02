@@ -3,9 +3,10 @@ from typing import Union
 from kik_unofficial.datatypes.xmpp.chatting import *
 from kik_unofficial.datatypes.xmpp.errors import LoginError, SignUpError
 from kik_unofficial.datatypes.xmpp.login import LoginResponse, ConnectionFailedResponse, CaptchaElement, TempBanElement
-from kik_unofficial.datatypes.xmpp.roster import FetchRosterResponse, PeersInfoResponse, GroupSearchResponse
+from kik_unofficial.datatypes.xmpp.roster import FetchRosterResponse, PeersInfoResponse, GroupSearchResponse, PeersInfoError
 from kik_unofficial.datatypes.xmpp.sign_up import RegisterResponse, UsernameUniquenessResponse
 from kik_unofficial.datatypes.xmpp.xiphias import UsersResponse, UsersByAliasResponse
+from kik_unofficial.datatypes.xmpp.auth_stanza import AuthStanza
 
 
 class KikClientCallback:
@@ -42,12 +43,22 @@ class KikClientCallback:
         """
         pass
 
+    def on_auth_cert_validated(self, response: AuthStanza):
+        """
+        Gets called when the AuthStanza has validated with the Kik server.
+        The certificate can now be used to authenticate with Kik equipped web apps.
+        :param response: The AuthStanza received that is used to sign Kik web app requests
+        """
+        pass
+
     def on_sign_up_ended(self, response: RegisterResponse):
         pass
 
     def on_peer_info_received(self, response: PeersInfoResponse):
         pass
 
+    def on_peer_info_error(self, response: PeersInfoError):
+        pass
     def on_friend_attribution(self, response: IncomingFriendAttribution):
         pass
 

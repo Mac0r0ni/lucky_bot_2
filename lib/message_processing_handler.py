@@ -140,9 +140,10 @@ def process_message(config, message_type, message, user_jid, group_jid, bot_id, 
             message = message.replace("$d", str(days))
         return message
     elif message_type == "join_pre_queue":  # join message before user in join queue
+        last_join = RedisCache(config).get_single_last_queue("joiner", group_jid)
         if "$u" in message or "{username}" in message:
-            message = message.replace("{username}", user_jid)
-            message = message.replace("$u", user_jid)
+            message = message.replace("{username}", last_join["display_name"])
+            message = message.replace("$u", last_join["display_name"])
         if "$gh" in message:
             if group_hash is not None:
                 message = message.replace("$gh", group_hash)

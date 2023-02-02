@@ -30,6 +30,7 @@ from lib.email_handler import send_email
 from lib.gif_response_handler import GifResponse
 from lib.group_message_handler import GroupMessage
 from lib.group_status_handler import GroupStatus
+from lib.heartbeat_handler import heartbeat_loop
 from lib.image_response_handler import ImageResponse
 from lib.peer_info_handler import PeerInfo
 from lib.private_message_handler import PrivateMessage
@@ -57,8 +58,8 @@ class LuckyBot(KikClientCallback):
         self.bot_display_name = ""
         self.bot_id = bot_configuration[0].bot_id
         self.config = config_data
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
         self.client = KikClient(self,
@@ -81,6 +82,20 @@ class LuckyBot(KikClientCallback):
     def on_authenticated(self):
         print(self.info + f'Authenticated' + Style.RESET_ALL)
         self.client.request_roster()
+
+        heartbeat_data = RedisCache(self.config).get_heartbeat_data(self.bot_id)
+        if heartbeat_data:
+            if heartbeat_data["offline"] and heartbeat_data['recovered'] is False:
+                heartbeat_data["offline"] = False
+                heartbeat_data["recovered"] = True
+                heartbeat_data["time"] = time.time()
+                if heartbeat_data["captcha"]:
+                    heartbeat_data["captcha"] = False
+                if heartbeat_data["temp_ban"]:
+                    heartbeat_data["temp_ban"] = False
+                    heartbeat_data["temp_ban_time"] = 0
+            RedisCache(self.config).update_heartbeat_data(heartbeat_data, self.bot_id)
+        Thread(target=heartbeat_loop, args=(self.client, self.config, self.bot_id,)).start()
 
     def on_login_ended(self, response: LoginResponse):
         print(self.info + f'Full name: {response.first_name} {response.last_name}' + Style.RESET_ALL)
@@ -134,19 +149,18 @@ class LuckyBot(KikClientCallback):
     def on_group_receipts_received(self, response: chatting.IncomingGroupReceiptsEvent):
         if self.config["general"]["debug"] >= 2:
             print(self.debug + f'Message with ID {response.message_id} has been {response.type}.' + Style.RESET_ALL)
-            group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
-            if not group_data:
-                return
-            if "lurkers" in group_data:
+        group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
+        if not group_data:
+            return
+        if "lurkers" in group_data:
+            RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
+                                                             response.group_jid)
+        else:
+            if "group_members" in group_data:
+                RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"],
+                                                              response.group_jid)
                 RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
                                                                  response.group_jid)
-            else:
-                if "group_members" in group_data:
-                    RedisCache(self.config).add_all_talker_lurker("lurkers", group_data["group_members"],
-                                                                  response.group_jid)
-                    RedisCache(self.config).set_single_talker_lurker("lurkers", time.time(), response.from_jid,
-                                                                     response.group_jid)
-            return
         return
 
     # Listener for Group Messages
@@ -210,6 +224,80 @@ class LuckyBot(KikClientCallback):
     def on_peer_info_received(self, response: PeersInfoResponse):
         PeerInfo(self).peer_info_parser(response)
 
+    # Listener for when Peer Info or Xiphias request has an error.
+    def on_peer_info_error(self, response: PeersInfoError):
+        print(self.critical + "Peer Response Error: " + str(response.error_code))
+        join_queue_users = RedisCache(self.config).get_all_join_queue(self.bot_id)
+        for x in join_queue_users:
+            join_data = json.loads(join_queue_users[x].decode("utf-8"))
+            if "peer_info_request_id" in join_data:
+                if join_data["peer_info_request_id"] == response.message_id:
+                    user_join_info = RedisCache(self.config).get_single_join_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From User Request: " + str(user_join_info["display_name"]))
+                    request_type = user_join_info["peer_info_request_type"]
+                    request_jid = user_join_info["alias_jid"]
+                    request_tries = int(user_join_info["peer_info_request_tries"])
+                    if request_tries <= 4:
+                        if request_type == "xpub":
+                            print(self.warning + "Retrying Peer Info Request")
+                            message_id = self.client.xiphias_get_users_by_alias(request_jid)
+                            user_join_info["peer_info_request_tries"] += 1
+                            user_join_info["peer_info_request_id"] = message_id
+                            RedisCache(self.config).add_to_join_queue(request_jid, user_join_info, self.bot_id)
+                            return
+                        elif request_type == "xpri":
+                            print(self.warning + "Retrying Peer Info Request")
+                            message_id = self.client.xiphias_get_users(request_jid)
+                            user_join_info["peer_info_request_tries"] += 1
+                            user_join_info["peer_info_request_id"] = message_id
+                            RedisCache(self.config).add_to_join_queue(request_jid, user_join_info, self.bot_id)
+                            return
+                        else:
+                            print(self.critical + "Unknown Request Type")
+                            return
+                    else:
+                        RedisCache(self.config).remove_from_join_queue(request_jid, self.bot_id)
+                        print(self.critical + "Peer Info Request Failed 5 times. Removing user from join queue.")
+                        return
+        group_queue = RedisCache(self.config).get_group_queue(self.bot_id)
+        for x in group_queue:
+            group_data = json.loads(group_queue[x].decode("utf-8"))
+            if "info_id_1" in group_data and "info_id_2" in group_data:
+                if group_data["info_id_1"] == response.message_id:
+                    group_queue_data = RedisCache(self.config).get_single_group_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From Group Request: " + str(group_queue_data["group_name"]))
+                    request_tries = int(group_queue_data["info_1_tries"])
+                    if request_tries <= 4:
+                        print(self.warning + "Retrying Group Info Request")
+                        message_id = self.client.request_info_of_users(group_queue_data["info_request_1"])
+                        request_tries += 1
+                        RedisCache(self.config).update_group_queue_json("info_1_tries", request_tries, x.decode('utf-8'), self.bot_id)
+                        RedisCache(self.config).update_group_queue_json("info_id_1", message_id,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        return
+                    else:
+                        RedisCache(self.config).remove_from_group_queue(x.decode('utf-8'), self.bot_id)
+                        print(self.critical + "Group Info Request Failed 5 times. Removing group from group queue.")
+                        return
+
+                elif group_data["info_id_2"] == response.message_id:
+                    group_queue_data = RedisCache(self.config).get_single_group_queue(x.decode('utf-8'), self.bot_id)
+                    print(self.warning + "Error From Group Request: " + str(group_queue_data["group_name"]))
+                    request_tries = int(group_queue_data["info_2_tries"])
+                    if request_tries <= 4:
+                        print(self.warning + "Retrying Group Info Request")
+                        message_id = self.client.request_info_of_users(group_queue_data["info_request_2"])
+                        request_tries += 1
+                        RedisCache(self.config).update_group_queue_json("info_2_tries", request_tries,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        RedisCache(self.config).update_group_queue_json("info_id_2", message_id,
+                                                                        x.decode('utf-8'), self.bot_id)
+                        return
+                    else:
+                        RedisCache(self.config).remove_from_group_queue(x.decode('utf-8'), self.bot_id)
+                        print(self.critical + "Group Info Request Failed 5 times. Removing group from group queue.")
+                        return
+
     # Listener for when Peer Info received through Xiphias request.
     def on_xiphias_get_users_response(self, response: Union[UsersResponse, UsersByAliasResponse]):
         PeerInfo(self).xiphias_info_parser(response)
@@ -232,7 +320,7 @@ class LuckyBot(KikClientCallback):
             heartbeat_queue = RedisCache(self.config).get_heartbeat_data(self.bot_id)
             if heartbeat_queue:
                 trip = time.time() - heartbeat_queue["time"]
-                if self.config.log_settings["debug"] >= 1:
+                if self.config["general"]["debug"] >= 2:
                     print("Took " + str(trip) + " seconds. Bot Alive")
                 heartbeat_queue["received"] = True
                 RedisCache(self.config).update_heartbeat_data(heartbeat_queue, self.bot_id)
@@ -253,9 +341,19 @@ class LuckyBot(KikClientCallback):
     # Listener for when roster is received.
     def on_roster_received(self, response: FetchRosterResponse):
         if self.config["general"]["debug"] >= 1:
-            members = '\n'.join([str(member) for member in response.peers])
+            groups = []
+            users = []
+            for peer in response.peers:
+                if "groups.kik.com" in peer.jid:
+                    groups.append(peer.jid)
+                else:
+                    users.append(peer.jid)
+
+            user_text = '\n'.join([str(us) for us in users])
+            group_text = '\n'.join([str(gr) for gr in groups])
             partner_count = len(response.peers)
-            print(self.debug + f'Roster Recieved\nTotal Peers: {str(partner_count)}\nPeers: {members}.' + Style.RESET_ALL)
+            print(
+                self.info + f'Roster Recieved\nTotal Peers: {str(partner_count)}\n' + Style.BRIGHT + Fore.CYAN + 'Groups:\n' + Style.RESET_ALL + f'{group_text}\n' + Style.BRIGHT + Fore.YELLOW + 'Users:\n' + Style.RESET_ALL + f'{user_text}')
 
         return
 
@@ -276,7 +374,7 @@ class LuckyBot(KikClientCallback):
     def on_login_error(self, login_error: LoginError):
         print(self.critical + f'Login failed: {login_error.error_code}, {login_error.error_messages}.' + Style.RESET_ALL)
         if login_error.is_captcha():
-            send_email(self.config, "captcha", self.bot_display_name, self.bot_id)
+            send_email(self.config, "captcha", self.bot_id)
             heartbeat_queue = RedisCache(self.config).get_heartbeat_data(self.bot_id)
             heartbeat_queue["captcha"] = True
             heartbeat_queue["offline"] = True
@@ -287,7 +385,7 @@ class LuckyBot(KikClientCallback):
     def on_temp_ban_received(self, response: TempBanElement):
         print(self.critical + f'Temporary Ban: {response.ban_title}, {response.ban_message}\nEnds: {response.ban_end_time}.' + Style.RESET_ALL)
 
-        send_email(self.config, "temp_ban", self.bot_display_name, self.bot_id)
+        send_email(self.config, "temp_ban", self.bot_id)
         heartbeat_queue = RedisCache(config_data).get_heartbeat_data(self.bot_id)
         heartbeat_queue["captcha"] = False
         heartbeat_queue["offline"] = True

@@ -12,10 +12,11 @@ kik_version_15_26_info = {'kik_version': '15.26.1.22599', 'classes_dex_sha1_dige
 kik_version_15_31_info = {'kik_version': '15.31.1.23601', 'classes_dex_sha1_digest': 'W8KT9Kuom+EtyroqHrkdF0x6Pg0='}
 kik_version_15_42_info = {'kik_version': '15.42.1.26040', 'classes_dex_sha1_digest': 'Swv+kgQoH3ylsfrCDdFOWgs1A04='}
 kik_version_15_47_info = {'kik_version': '15.47.0.26928', 'classes_dex_sha1_digest': 'Jzxa5oIQjOvp1n1oKc3YNr8CYms='}
+kik_version_15_49_info = {'kik_version': '15.49.0.27501', 'classes_dex_sha1_digest': '0skrKmm8cIaGTLH57nG5zH0vAJA='}
 
 device_id = "d735bcf7869b293ce7c33c28618d5a98"  # random 16 bytes. Generate once and don't change
 # https://www.random.org/bytes/
-kik_version_info = kik_version_15_47_info  # a kik version that's not updated might cause a captcha on login
+kik_version_info = kik_version_15_49_info  # a kik version that's not updated might cause a captcha on login
 android_id = "fc81c929c5996929"  # random 8 bytes. Generate once and don't change https://www.random.org/bytes/
 
 # Change info given to kik on login request. To help from looking suspicious.

@@ -13,8 +13,8 @@ class StickerResponse:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -23,11 +23,11 @@ class StickerResponse:
         if not response.group_jid:
             # PM Sticker Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "PM Sticker Response" + Style.RESET_ALL)
+                print(self.debug + "PM Sticker Response")
         else:
             # Group Sticker Response
             if self.config["general"]["debug"] == 1:
-                print(Fore.LIGHTRED_EX + "Group Sticker Response" + Style.RESET_ALL)
+                print(self.debug + "Group Sticker Response")
 
             group_data = RedisCache(self.config).get_all_group_data(response.group_jid)
             if not group_data:

@@ -15,8 +15,8 @@ class GroupHistory:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -104,8 +104,14 @@ class GroupHistory:
         if chat_message.from_jid in all_admins:
             if group_members and group_history:
                 ranking_list = {}
+                for h in group_history:
+                    if h not in group_members:
+                        RedisCache(self.config).remove_single_history(h, chat_message.group_jid)
                 for m in group_members:
-                    ranking_list[m] = group_history[m]["message"]
+                    if m in group_history:
+                        ranking_list[m] = group_history[m]["message"]
+                    else:
+                        RedisCache(self.config).add_single_history(m, chat_message.group_jid)
 
                 if place == "top":
                     sorted_ranks = {k: v for k, v in

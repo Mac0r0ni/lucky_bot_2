@@ -13,30 +13,30 @@ from email.utils import formataddr
 message_offline = """
 Subject: Bot Is Offline!
 
-{} number {} is down and is being automatically restarted.
+{} is down and is being automatically restarted.
 """
 
 message_captcha = """
 Subject: Stuck at Captcha!
 
-{} number {} needs captcha solved!
+{} needs captcha solved!
 """
 
 message_temp_ban = """
 Subject: Temp Ban!
 
-{} number {} has been temporarily banned!
+{} has been temporarily banned!
 """
 
 
-def send_email(config, reason, bot_name, bot_id):
+def send_email(config, reason, bot_id):
 
     if reason == "captcha":
-        message_body = message_captcha.format(bot_name.capitalize() + "_" + bot_id, bot_name.capitalize(), bot_id)
+        message_body = message_captcha.format("lucky_bot_" + str(bot_id))
     elif reason == "offline":
-        message_body = message_offline.format(bot_name.capitalize() + "_" + bot_id, bot_name.capitalize(), bot_id)
+        message_body = message_offline.format("lucky_bot_" + str(bot_id))
     elif reason == "temp_ban":
-        message_body = message_temp_ban.format(bot_name.capitalize() + "_" + bot_id, bot_name.capitalize(), bot_id)
+        message_body = message_temp_ban.format("lucky_bot_" + str(bot_id))
     else:
         return
 

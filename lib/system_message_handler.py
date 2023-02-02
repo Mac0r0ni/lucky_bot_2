@@ -14,15 +14,14 @@ class GroupSysMessage:
         self.bot_id = client.bot_id
         self.bot_display_name = client.bot_display_name
         self.bot_username = client.bot_username
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def group_sys_message_parser(self, response):
         if self.config["general"]["debug"] == 1:
-            print(Fore.GREEN + Style.BRIGHT + "[+] System message in {}: {}".format(response.group_jid,
-                                                                                    response.sysmsg) + Style.RESET_ALL)
+            print(self.info + f"System message in {response.group_jid}: {response.sysmsg}")
 
         if 'As a new member of this group' in response.sysmsg:
             kikjail_1 = response.sysmsg.split("emojis. In ")
@@ -32,8 +31,7 @@ class GroupSysMessage:
             return
 
         elif 'added you' in response.sysmsg:
-            print(Fore.GREEN + Style.BRIGHT + "[+] I have been added to the group {}".format(response.group_jid
-                                                                                             ) + Style.RESET_ALL)
+            print(self.info + f"I have been added to the group {response.group_jid}")
 
             # get bot data from cache
             bot_data = RedisCache(self.config).get_all_bot_config_data(self.bot_id)
@@ -100,12 +98,18 @@ class GroupSysMessage:
 
                 info_id_1 = self.client.request_info_of_users(first_half)
                 info_id_2 = self.client.request_info_of_users(second_half)
+                info_1_tries = 0
+                info_2_tries = 0
 
             else:
+                first_half = group_members_list
+                second_half = "None"
                 info_id_1 = self.client.request_info_of_users(group_members_list)
                 info_id_2 = "None"
+                info_1_tries = 0
+                info_2_tries = 0
 
-            RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, group_hash, group_name, self.bot_id, 0,
+            RedisCache(self.config).add_to_group_queue_cache(scope, info_id_1, info_id_2, first_half, second_half, info_1_tries, info_2_tries, group_hash, group_name, self.bot_id, 0,
                                                   response.group.owner,
                                                   response.group.admins, response.group.members, response.group_jid)
 

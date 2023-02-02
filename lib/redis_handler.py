@@ -16,8 +16,8 @@ class RedisCache:
         self.redis_port = config_data["redis"]["port"]
         self.redis_password = config_data["redis"]["password"]
         self.config = config_data
-        self.debug = f'[' + Style.BRIGHT + Fore.CYAN + '^' + Style.RESET_ALL + '] '
-        self.info = f'[' + Style.BRIGHT + Fore.CYAN + '+' + Style.RESET_ALL + '] '
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
         self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
@@ -196,9 +196,9 @@ class RedisCache:
     #  Redis Cache - Group Data Cache
     # -----------------------------------------
 
-    def add_to_group_queue_cache(self, scope, info_id_1, info_id_2, group_hash, group_name, bot_id, status, owner,
+    def add_to_group_queue_cache(self, scope, info_id_1, info_id_2, request_list_1, request_list_2, info_1_tries, info_2_tries, group_hash, group_name, bot_id, status, owner,
                                  admins, members, group_jid):
-        group_data = {"scope": scope, "info_id_1": info_id_1, "info_id_2": info_id_2, "group_status": status,
+        group_data = {"scope": scope, "info_id_1": info_id_1, "info_request_1": request_list_1, "info_id_2": info_id_2, "info_request_2": request_list_2, "info_1_tries":info_1_tries, "info_2_tries": info_2_tries, "group_status": status,
                       "group_name": group_name, "group_hash": group_hash, "owner": {},
                       "admins": {},
                       "members": {}, "owner_resp": {}, "admins_resp": {}, "members_resp": {}}
