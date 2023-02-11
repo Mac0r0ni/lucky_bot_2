@@ -14,6 +14,44 @@ from lib.remote_admin_handler import RemoteAdmin
 from lib.user_handler import User
 
 
+class ChatWipe:
+    def __init__(self, client):
+        self.client = client.client
+        self.callback = client
+        self.config = client.config
+        self.bot_id = client.bot_id
+        self.bot_display_name = client.bot_display_name
+        self.bot_username = client.bot_username
+        self.debug = f'[' + Style.BRIGHT + Fore.MAGENTA + '^' + Style.RESET_ALL + '] '
+        self.info = f'[' + Style.BRIGHT + Fore.GREEN + '+' + Style.RESET_ALL + '] '
+        self.warning = f'[' + Style.BRIGHT + Fore.YELLOW + '!' + Style.RESET_ALL + '] '
+        self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
+
+    def main(self, chat_message, prefix):
+        s = chat_message.body.lower()
+        group_data = RedisCache(self.config).get_all_group_data(chat_message.group_jid)
+        if not group_data:
+            return
+        group_messages = group_data["group_messages"]
+        bot_admins = RedisCache(self.config).get_bot_config_data("json", "bot_admins", self.bot_id)
+        admins = group_data["group_admins"]
+        all_admins = {**bot_admins, **admins}
+        if s == prefix + "clear":
+            if chat_message.from_jid in all_admins:
+                cooldown = RedisCache(self.config).get_from_group_cooldown(s, chat_message.group_jid)
+                now = time.time()
+                a = float(now) - float(cooldown)
+                b = a / 60
+                if a > 300 or cooldown == 0:
+                    count = 0
+                    while count < 15:
+                        RemoteAdmin(self).send_message(chat_message,
+                                                              "🍀         🍀                                                 🍀       🍀            🍀                                               🍀           🍀     🍀                  🍀                    🍀                 🍀                                  🍀           🍀                                       🍀            🍀         🍀           🍀                                       🍀           🍀")
+                        count += 1
+                        time.sleep(.5)
+                    RedisCache(self.config).add_to_group_cooldown(s, chat_message.group_jid)
+
+
 class WelcomeMessage:
     def __init__(self, client):
         self.client = client.client
@@ -1401,6 +1439,7 @@ class UserCap:
                 status_string = "Group User Cap Status: Off\n"
 
             RemoteAdmin(self).send_message(chat_message, status_string)
+
 
 class BackupRestore:
     def __init__(self, client):

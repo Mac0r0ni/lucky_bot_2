@@ -287,7 +287,7 @@ class Triggers:
                     RedisCache(self.config).add_to_media_sub_queue(sub[0], sub[1], "add", "admin_triggers",
                                                                    chat_message.from_jid,
                                                                    chat_message.group_jid)
-                    media_sub_timeout(self.client, chat_message, chat_message.from_jid, chat_message.group_jid)
+                    media_sub_timeout(self, chat_message, chat_message.from_jid, chat_message.group_jid)
             else:
                 Triggers(self).add_substitution(chat_message, "add", "admin_triggers", sub,
                                                 chat_message.group_jid,
@@ -388,7 +388,7 @@ class Triggers:
         if sub_status == 1:  # Mode 1 Everyone Can Add/Delete
             for k in user_triggers:
                 if k == substitution.lower():
-                    result = Database(self.config).delete_substitution("user_triggers", k, group_jid, peer_jid,
+                    result = Database(self.config).delete_substitution("user_triggers", [k], group_jid, peer_jid,
                                                                        self.bot_id)
                     if result == 1 or result == 4:
                         RemoteAdmin(self).send_message(message, "Deleted: " + substitution)
@@ -397,7 +397,7 @@ class Triggers:
 
             for k in admin_triggers:
                 if k == substitution.lower():
-                    result = Database(self.config).delete_substitution("admin_triggers", k, group_jid, peer_jid,
+                    result = Database(self.config).delete_substitution("admin_triggers", [k], group_jid, peer_jid,
                                                                        self.bot_id)
                     if result == 1 or result == 4:
                         RemoteAdmin(self).send_message(message, "Deleted: " + substitution)
@@ -410,7 +410,7 @@ class Triggers:
                 return
             for k in admin_triggers:
                 if k == substitution.lower():
-                    result = Database(self.config).delete_substitution("admin_triggers", k, group_jid, peer_jid,
+                    result = Database(self.config).delete_substitution("admin_triggers", [k], group_jid, peer_jid,
                                                                        self.bot_id)
                     if result == 1 or result == 4:
                         RemoteAdmin(self).send_message(message, "Deleted: " + substitution)
@@ -418,7 +418,7 @@ class Triggers:
                         RemoteAdmin(self).send_message(message, "Only admins can delete admin triggers.")
             for k in user_triggers:
                 if k == substitution.lower():
-                    result = Database(self.config).delete_substitution("user_triggers", k, group_jid, peer_jid,
+                    result = Database(self.config).delete_substitution("user_triggers", [k], group_jid, peer_jid,
                                                                        self.bot_id)
                     if result == 1 or result == 4:
                         RemoteAdmin(self).send_message(message, "Deleted: " + substitution)

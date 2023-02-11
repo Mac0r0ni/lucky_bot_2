@@ -7,7 +7,7 @@ from colorama import Fore, Style
 from lib.database_handler import Database
 from lib.group_admin_tools import WelcomeMessage, Lock, Noob, Invite, NameGrab, Verification, GroupTimer, LeaveMessage, \
     BotHelpers, Silent, Censor, Forward, Profile, Purge, UserCap, Whitelist, BotSFW, BackupRestore, DataTransfer, \
-    BotStatus, GroupStats
+    BotStatus, GroupStats, ChatWipe
 from lib.group_fun_handler import ChanceGames
 from lib.history_handler import GroupHistory
 from lib.message_processing_handler import process_message
@@ -166,6 +166,10 @@ class GroupMessage:
             elif gm == prefix + "exit" or prefix + "exit message" in gm or gm == prefix + "exit status":
                 # Welcome Message Status or Change
                 LeaveMessage(self).main(chat_message, prefix)
+                return
+            elif gm == prefix + "clear":
+                # Welcome Message Status or Change
+                ChatWipe(self).main(chat_message, prefix)
                 return
             elif gm == prefix + "lock" or prefix + "lock message" in gm or gm == prefix + "lock status":
                 # Lock Status, Message Change, Or Status Change

@@ -32,11 +32,11 @@ class Database:
         self.critical = f'[' + Style.BRIGHT + Fore.RED + 'X' + Style.RESET_ALL + '] '
 
     def initalize_bot_database(self):
-        group_table_query = "CREATE TABLE group_data (group_id int(11) NOT NULL COMMENT 'Auto Incremented Group ID', group_jid varchar(16) NOT NULL COMMENT 'KIK Group JID', group_hash varchar(40) NOT NULL COMMENT 'KIK Group Hash', group_name varchar(100) NOT NULL COMMENT 'KIK Group Name', group_settings text NOT NULL COMMENT 'Bot Function Settings', group_messages text NOT NULL COMMENT 'Custom Bot Messages', group_owner text NOT NULL COMMENT 'Group Owner', group_admins text NOT NULL COMMENT 'Group Admins', group_members text NOT NULL COMMENT 'Group Members', user_triggers mediumtext NOT NULL COMMENT 'User Triggers', admin_triggers mediumtext NOT NULL COMMENT 'Admin Triggers', censor_words mediumtext NOT NULL COMMENT 'Censor Words', bot_id int(4) NOT NULL COMMENT 'ID Number of Bot - 1-9999')"
+        group_table_query = "CREATE TABLE group_data (group_jid varchar(16) NOT NULL COMMENT 'KIK Group JID', group_hash varchar(40) NOT NULL COMMENT 'KIK Group Hash', group_name varchar(255) NOT NULL COMMENT 'KIK Group Name', group_settings text NOT NULL COMMENT 'Bot Function Settings', group_messages text NOT NULL COMMENT 'Custom Bot Messages', group_owner text NOT NULL COMMENT 'Group Owner', group_admins text NOT NULL COMMENT 'Group Admins', group_members text NOT NULL COMMENT 'Group Members', user_triggers mediumtext NOT NULL COMMENT 'User Triggers', admin_triggers mediumtext NOT NULL COMMENT 'Admin Triggers', censor_words mediumtext NOT NULL, group_id int(11) NOT NULL COMMENT 'Auto Incremented Group ID', bot_id int(4) NOT NULL COMMENT 'ID Number of Bot - 1-9999')"
         group_alter_query = "ALTER TABLE group_data ADD PRIMARY KEY (group_id), ADD UNIQUE KEY group_jid (group_jid), ADD KEY group_jid_2 (group_jid), ADD KEY group_hash (group_hash), ADD KEY bot_id (bot_id)"
         group_modify_query = "ALTER TABLE group_data MODIFY group_id int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto Incremented Group ID'"
-        bot_table_query = "CREATE TABLE `bot_data` (`bot_id` int(4) NOT NULL COMMENT 'Bot ID # 1-9999', `bot_name` varchar(75) NOT NULL COMMENT 'Bot Name', `bot_settings` text NOT NULL DEFAULT '{}' COMMENT 'Bot Settings - JSON Format', `bot_whitelist_groups` text NOT NULL DEFAULT '[]' COMMENT 'Whitelisted Groups - Python List Format', `bot_blacklist_groups` text NOT NULL DEFAULT '[]' COMMENT 'Blacklisted Groups - Python List Format', `bot_admins` text NOT NULL DEFAULT '[]' COMMENT 'Bot Admin JID - Python List Format')"
-        bot_alter_query = "ALTER TABLE `bot_data` ADD PRIMARY KEY (`bot_id`), ADD UNIQUE KEY `bot_id` (`bot_id`)"
+        bot_table_query = "CREATE TABLE bot_data (bot_id int(4) NOT NULL COMMENT 'Bot ID # 1-9999', bot_name varchar(75) NOT NULL COMMENT 'Bot Name', bot_settings text NOT NULL DEFAULT '{}' COMMENT 'Bot Settings - JSON Format', bot_whitelist_groups text DEFAULT '[]' COMMENT 'Whitelisted Groups - Python List Format', bot_blacklist_groups text NOT NULL DEFAULT '[]' COMMENT 'Blacklisted Groups - Python List Format', bot_admins text NOT NULL DEFAULT '[]' COMMENT 'Bot Admin JID - Python List Format')"
+        bot_alter_query = "ALTER TABLE bot_data ADD PRIMARY KEY (bot_id), ADD UNIQUE KEY bot_id (bot_id)"
         self.cursor.execute(group_table_query)
         self.cursor.execute(group_alter_query)
         self.cursor.execute(group_modify_query)
@@ -452,19 +452,18 @@ class Database:
         admin_triggers = group_data["admin_triggers"]
         all_admins = {**bot_admins, **group_admins}
         if sub_type == "admin_triggers":
-
             if peer_jid in all_admins:
-                if admin_triggers[sub][number][-3:] == "png" or admin_triggers[sub][number][-3:] == "jpg":
-                    if os.path.exists(admin_triggers[sub][number]):
-                        os.remove(admin_triggers[sub][number])
-                elif admin_triggers[sub][number][-3:] == "mp4":
-                    if os.path.exists(admin_triggers[sub][number]):
-                        os.remove(admin_triggers[sub][number])
-                        os.remove(admin_triggers[sub][number].replace("mp4", "jpg"))
-                elif admin_triggers[sub][number][-4:] == "json":
-                    if os.path.exists(admin_triggers[sub][number]):
-                        os.remove(admin_triggers[sub][number])
-                del admin_triggers[sub][number]
+                if admin_triggers[sub[0]][number][-3:] == "png" or admin_triggers[sub[0]][number][-3:] == "jpg":
+                    if os.path.exists(admin_triggers[sub[0]][number]):
+                        os.remove(admin_triggers[sub[0]][number])
+                elif admin_triggers[sub[0]][number][-3:] == "mp4":
+                    if os.path.exists(admin_triggers[sub[0]][number]):
+                        os.remove(admin_triggers[sub[0]][number])
+                        os.remove(admin_triggers[sub[0]][number].replace("mp4", "jpg"))
+                elif admin_triggers[sub[0]][number][-4:] == "json":
+                    if os.path.exists(admin_triggers[sub[0]][number]):
+                        os.remove(admin_triggers[sub[0]][number])
+                del admin_triggers[sub[0]][number]
                 query = "UPDATE group_data SET admin_triggers = %s WHERE group_jid = %s"
                 self.cursor.execute(query, (json.dumps(admin_triggers), group_jid.split('@')[0]))
                 self.connection.commit()
@@ -475,18 +474,17 @@ class Database:
             else:
                 return 2
         else:
-
-            if user_triggers[sub][number][-3:] == "png" or user_triggers[sub][number][-3:] == "jpg":
-                if os.path.exists(user_triggers[sub][number]):
-                    os.remove(user_triggers[sub][number])
-            elif user_triggers[sub][number][-3:] == "mp4":
-                if os.path.exists(user_triggers[sub][number]):
-                    os.remove(user_triggers[sub][number])
-                    os.remove(user_triggers[sub][number].replace("mp4", "jpg"))
-            elif user_triggers[sub][number][-4:] == "json":
-                if os.path.exists(user_triggers[sub][number]):
-                    os.remove(user_triggers[sub][number])
-            del user_triggers[sub][number]
+            if user_triggers[sub[0]][number][-3:] == "png" or user_triggers[sub[0]][number][-3:] == "jpg":
+                if os.path.exists(user_triggers[sub[0]][number]):
+                    os.remove(user_triggers[sub[0]][number])
+            elif user_triggers[sub[0]][number][-3:] == "mp4":
+                if os.path.exists(user_triggers[sub[0]][number]):
+                    os.remove(user_triggers[sub[0]][number])
+                    os.remove(user_triggers[sub[0]][number].replace("mp4", "jpg"))
+            elif user_triggers[sub[0]][number][-4:] == "json":
+                if os.path.exists(user_triggers[sub[0]][number]):
+                    os.remove(user_triggers[sub[0]][number])
+            del user_triggers[sub[0]][number]
             query = "UPDATE group_data SET user_triggers = %s WHERE group_jid = %s"
             self.cursor.execute(query, (json.dumps(user_triggers), group_jid.split('@')[0]))
             self.connection.commit()
@@ -503,22 +501,20 @@ class Database:
         admin_triggers = group_data["admin_triggers"]
         all_admins = {**bot_admins, **group_admins}
         if sub_type == "admin_triggers":
-
             if peer_jid in all_admins:
-
-                for x in admin_triggers[sub]:
-                    if admin_triggers[sub][x][-3:] == "png" or admin_triggers[sub][x][-3:] == "jpg":
-                        if os.path.exists(admin_triggers[sub][x]):
-                            os.remove(admin_triggers[sub][x])
-                    elif admin_triggers[sub][x][-3:] == "mp4":
-                        if os.path.exists(admin_triggers[sub][x]):
-                            os.remove(admin_triggers[sub][x])
-                        if os.path.exists(admin_triggers[sub][x].replace("mp4", "jpg")):
-                            os.remove(admin_triggers[sub][x].replace("mp4", "jpg"))
-                    elif admin_triggers[sub][x][-4:] == "json":
-                        if os.path.exists(admin_triggers[sub][x]):
-                            os.remove(admin_triggers[sub][x])
-                del admin_triggers[sub]
+                for x in admin_triggers[sub[0]]:
+                    if admin_triggers[sub[0]][x][-3:] == "png" or admin_triggers[sub[0]][x][-3:] == "jpg":
+                        if os.path.exists(admin_triggers[sub[0]][x]):
+                            os.remove(admin_triggers[sub[0]][x])
+                    elif admin_triggers[sub[0]][x][-3:] == "mp4":
+                        if os.path.exists(admin_triggers[sub[0]][x]):
+                            os.remove(admin_triggers[sub[0]][x])
+                        if os.path.exists(admin_triggers[sub[0]][x].replace("mp4", "jpg")):
+                            os.remove(admin_triggers[sub[0]][x].replace("mp4", "jpg"))
+                    elif admin_triggers[sub[0]][x][-4:] == "json":
+                        if os.path.exists(admin_triggers[sub[0]][x]):
+                            os.remove(admin_triggers[sub[0]][x])
+                del admin_triggers[sub[0]]
                 query = "UPDATE group_data SET admin_triggers = %s WHERE group_jid = %s"
                 self.cursor.execute(query, (json.dumps(admin_triggers), group_jid.split('@')[0]))
                 self.connection.commit()
@@ -529,20 +525,19 @@ class Database:
             else:
                 return 2
         else:
-
-            for x in user_triggers[sub]:
-                if user_triggers[sub][x][-3:] == "png" or user_triggers[sub][x][-3:] == "jpg":
-                    if os.path.exists(user_triggers[sub][x]):
-                        os.remove(user_triggers[sub][x])
-                    elif user_triggers[sub][x][-3:] == "mp4":
-                        if os.path.exists(user_triggers[sub][x]):
-                            os.remove(user_triggers[sub][x])
-                        if os.path.exists(user_triggers[sub][x].replace("mp4", "jpg")):
-                            os.remove(user_triggers[sub][x].replace("mp4", "jpg"))
-                    elif user_triggers[sub][x][-4:] == "json":
-                        if os.path.exists(user_triggers[sub][x]):
-                            os.remove(user_triggers[sub][x])
-            del user_triggers[sub]
+            for x in user_triggers[sub[0]]:
+                if user_triggers[sub[0]][x][-3:] == "png" or user_triggers[sub[0]][x][-3:] == "jpg":
+                    if os.path.exists(user_triggers[sub[0]][x]):
+                        os.remove(user_triggers[sub[0]][x])
+                    elif user_triggers[sub[0]][x][-3:] == "mp4":
+                        if os.path.exists(user_triggers[sub[0]][x]):
+                            os.remove(user_triggers[sub[0]][x])
+                        if os.path.exists(user_triggers[sub[0]][x].replace("mp4", "jpg")):
+                            os.remove(user_triggers[sub[0]][x].replace("mp4", "jpg"))
+                    elif user_triggers[sub[0]][x][-4:] == "json":
+                        if os.path.exists(user_triggers[sub[0]][x]):
+                            os.remove(user_triggers[sub[0]][x])
+            del user_triggers[sub[0]]
             query = "UPDATE group_data SET user_triggers = %s WHERE group_jid = %s"
             self.cursor.execute(query, (json.dumps(user_triggers), group_jid.split('@')[0]))
             self.connection.commit()

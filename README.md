@@ -26,7 +26,7 @@ Requirements:
 
 ### Configure MySQL
 - Create a MYSQL User and an Empty database for that user. 
-- Add mysql host/port/username/password/databse name to bot_config.json
+- Add mysql host/port/username/password/database name to bot_config.json
 - run python3 init_database.py
 
 
@@ -41,7 +41,7 @@ Requirements:
 ### Create a Bot
 
 - Create a KIK account for the bot. Set name profile picture/background as you would normally
-- Run ```python3 init_bot.py kik_username kik_password bot_id```
+- Run ```python3 new_bot.py kik_username kik_password bot_id```
 Where kik_username is the username you set for the kik account and password is the password for the kik account. Bot id is a number between 1-9999 that will be this bots id number.
 
 
